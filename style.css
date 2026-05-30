@@ -1,0 +1,186 @@
+:root {
+    --primary: #0284c7;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --dark: #0f172a;
+    --light: #f8fafc;
+    --border: #cbd5e1;
+}
+
+* { box-sizing: border-box; transition: all 0.25s ease-in-out; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #cbd5e1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+/* SMARTPHONE CASING (375px x 667px strict) */
+.phone-container {
+    width: 375px;
+    height: 667px;
+    background-color: var(--dark);
+    border-radius: 40px;
+    padding: 10px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    border: 4px solid #64748b;
+}
+
+.phone-screen {
+    width: 100%;
+    height: 100%;
+    background-color: var(--light);
+    border-radius: 32px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    position: relative; /* CRITIQUE : Contient les absolutes comme le popup */
+}
+
+/* 1. ÉCRAN DE CHARGEMENT INITIAL (SPLASH SCREEN) */
+.splash-container {
+    width: 375px;
+    height: 667px;
+    background: linear-gradient(135deg, var(--dark) 0%, #1e293b 100%);
+    border-radius: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    text-align: center;
+    padding: 20px;
+}
+.splash-logo {
+    width: 90px;
+    height: 90px;
+    background-color: var(--primary);
+    border-radius: 24px;
+    font-size: 2.5rem;
+    font-weight: 900;
+    line-height: 90px;
+    box-shadow: 0 10px 25px rgba(2, 132, 199, 0.4);
+    margin-bottom: 20px;
+}
+.splash-title { font-size: 1.8rem; margin: 0 0 8px 0; font-weight: 800; }
+.splash-subtitle { color: #94a3b8; font-size: 0.9rem; margin: 0 0 40px 0; }
+.loading-bar { width: 60%; height: 6px; background-color: #334155; border-radius: 3px; overflow: hidden; }
+.loading-progress { width: 100%; height: 100%; background-color: var(--primary); animation: load 2.5s infinite linear; }
+
+@keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+/* 2. LOGIQUE DU CAMION ANIMÉ */
+.truck-animation-zone {
+    width: 100%;
+    height: 60px;
+    background-color: #e2e8f0;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: -10px;
+}
+.road {
+    position: absolute;
+    bottom: 12px;
+    width: 100%;
+    height: 4px;
+    background: repeating-linear-gradient(90deg, #94a3b8, #94a3b8 10px, transparent 10px, transparent 20px);
+}
+.moving-truck {
+    position: absolute;
+    font-size: 1.8rem;
+    bottom: 14px;
+    animation: drive 5s infinite linear;
+}
+@keyframes drive { 0% { left: -50px; } 100% { left: 100%; } }
+
+/* EN-TÊTE ET CADRE APP */
+.app-header {
+    background-color: var(--primary);
+    color: white;
+    padding: 18px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+.app-header h2 { margin: 0; font-size: 1.15rem; font-weight: 700; }
+#logoutBtn { background: rgba(255,255,255,0.25); padding: 6px 14px; font-size: 0.8rem; border-radius: 20px; color: white; border: none; font-weight: bold; cursor: pointer; }
+.app-content { padding: 20px; flex: 1; display: flex; flex-direction: column; }
+.screen { display: flex; flex-direction: column; gap: 20px; width: 100%; }
+.screen-header h3 { margin: 0 0 4px 0; font-size: 1.35rem; color: var(--dark); font-weight: 800; }
+.screen-header p { margin: 0; font-size: 0.85rem; color: #64748b; }
+
+.hidden { display: none !important; }
+
+/* REFACTORING DES COMPOSANTS FORMULAIRES */
+.form-group { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+label { font-size: 0.75rem; color: #475569; font-weight: 700; text-transform: uppercase; }
+input, select { width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: 12px; font-size: 0.95rem; }
+input:focus, select:focus { outline: none; border-color: var(--primary); transform: translateY(-1px); }
+
+.password-wrapper { position: relative; width: 100%; }
+.password-wrapper input { padding-right: 45px; }
+.toggle-password { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; }
+.error-message { font-size: 0.75rem; color: var(--danger); font-weight: 600; min-height: 14px; }
+input.input-error { border-color: var(--danger) !important; background-color: #fef2f2; }
+
+button { padding: 14px; border: none; border-radius: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; text-align: center; }
+.btn-primary { background-color: var(--primary); color: white; }
+.btn-success { background-color: var(--success); color: white; }
+.btn-danger { background-color: var(--danger); color: white; }
+.switch-text { text-align: center; font-size: 0.9rem; color: #64748b; }
+.switch-text a { color: var(--primary); text-decoration: none; font-weight: 700; }
+
+/* COMPOSANT DES ONGLETS (TABS ADM) */
+.tabs-navigation { display: flex; background-color: #e2e8f0; border-radius: 14px; padding: 4px; gap: 2px; }
+.tab-btn { flex: 1; padding: 10px 4px; font-size: 0.8rem; border-radius: 10px; background: transparent; color: #475569; font-weight: 700; }
+.tab-btn.active { background-color: white; color: var(--primary); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+.admin-tab-content { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+
+/* LE SCROLLER INTÉGRIÉ (ASCENSEUR ERGONOMIQUE) */
+.custom-scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+.custom-scroll::-webkit-scrollbar { width: 5px; }
+.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+.custom-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+
+.admin-card, .tracking-card { background: white; padding: 16px; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px; }
+.list-container { max-height: 170px; width: 100%; padding: 0; margin: 0; }
+li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e2e8f0; font-size: 0.85rem; }
+.action-group { display: flex; gap: 4px; }
+.btn-small { padding: 6px 10px; font-size: 0.7rem; border-radius: 6px; width: auto; }
+.price-box { background-color: #e0f2fe; color: #0369a1; padding: 12px; border-radius: 12px; text-align: center; font-weight: 700; }
+
+/* CORRECTION DU POPUP MODAL (Confinement strict à l'écran du Smartphone) */
+.popup-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.75);
+    z-index: 999;
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.popup-box {
+    background: white;
+    border-radius: 20px;
+    padding: 18px;
+    width: 92%;
+    max-width: 330px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    text-align: center;
+}
+.popup-box h4 { margin: 0 0 8px 0; color: var(--dark); font-size: 1.1rem; font-weight: 800; }
+.popup-box p { font-size: 0.8rem; color: #475569; margin: 0 0 12px 0; line-height: 1.4; }
+.popup-data-card { background-color: #f1f5f9; padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 0.8rem; text-align: left; word-break: break-all; }
+.popup-data-card p { margin: 6px 0; color: var(--dark); }

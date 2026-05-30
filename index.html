@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trans Kamutete - ERP Mobile v2.0</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="splashScreen" class="splash-container">
+        <div class="splash-logo">TK</div>
+        <h1 class="splash-title">Trans Kamutete</h1>
+        <p class="splash-subtitle">Logistique & Traçabilité en temps réel</p>
+        <div class="loading-bar"><div class="loading-progress"></div></div>
+    </div>
+
+    <div class="phone-container hidden" id="mainAppContainer">
+        <div class="phone-screen">
+            
+            <header class="app-header">
+                <h2>Trans Kamutete</h2>
+                <button id="logoutBtn" class="hidden" onclick="logout()">Quitter</button>
+            </header>
+
+            <main class="app-content">
+
+                <section id="loginScreen" class="screen">
+                    <div class="truck-animation-zone">
+                        <div class="road"></div>
+                        <div class="moving-truck">🚚💨</div>
+                    </div>
+                    
+                    <div class="screen-header">
+                        <h3>Connexion</h3>
+                        <p>Saisissez vos accès de sécurité</p>
+                    </div>
+                    <form onsubmit="handleLogin(event)" novalidate>
+                        <div class="form-group">
+                            <label for="loginEmail">Adresse Gmail</label>
+                            <input type="email" id="loginEmail" placeholder="nom@gmail.com" required>
+                            <span class="error-message" id="error-loginEmail"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPhone">Numéro de téléphone RDC</label>
+                            <input type="tel" id="loginPhone" placeholder="+243XXXXXXXXX" maxlength="13" required>
+                            <span class="error-message" id="error-loginPhone"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPassword">Mot de passe</label>
+                            <div class="password-wrapper">
+                                <input type="password" id="loginPassword" placeholder="Minimum 8 caractères" required>
+                                <span class="toggle-password" onclick="togglePasswordVisibility('loginPassword')">👁️</span>
+                            </div>
+                            <span class="error-message" id="error-loginPassword"></span>
+                        </div>
+                        <button type="submit" class="btn-primary">Se connecter sécurisé</button>
+                    </form>
+                    <p class="switch-text">
+                        Vous n'avez pas de compte ? <a href="#" onclick="switchScreen('registerScreen')">Créer un compte</a>
+                    </p>
+                </section>
+
+                <section id="registerScreen" class="screen hidden">
+                    <div class="screen-header">
+                        <h3>Créer un compte</h3>
+                        <p>Espace d'enregistrement client</p>
+                    </div>
+                    <form onsubmit="handleRegister(event)" novalidate>
+                        <div class="form-group">
+                            <label for="regName">Nom Complet</label>
+                            <input type="text" id="regName" placeholder="Ex: Muyeye Mwanabute" required>
+                            <span class="error-message" id="error-regName"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="regEmail">Adresse Gmail</label>
+                            <input type="email" id="regEmail" placeholder="nom@gmail.com" required>
+                            <span class="error-message" id="error-regEmail"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="regPhone">Téléphone RDC (13 car.)</label>
+                            <input type="tel" id="regPhone" placeholder="+243XXXXXXXXX" maxlength="13" required>
+                            <span class="error-message" id="error-regPhone"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="regPassword">Mot de passe</label>
+                            <div class="password-wrapper">
+                                <input type="password" id="regPassword" placeholder="Lettres et chiffres (Min 8)" required>
+                                <span class="toggle-password" onclick="togglePasswordVisibility('regPassword')">👁️</span>
+                            </div>
+                            <span class="error-message" id="error-regPassword"></span>
+                        </div>
+                        <button type="submit" class="btn-primary">Valider l'inscription</button>
+                    </form>
+                    <p class="switch-text">
+                        Déjà inscrit ? <a href="#" onclick="switchScreen('loginScreen')">Se connecter</a>
+                    </p>
+                </section>
+
+                <div id="confirmationPopup" class="popup-overlay hidden">
+                    <div class="popup-box">
+                        <h4>Aperçu de vos identifiants</h4>
+                        <p>Veuillez noter précieusement ces accès pour vous connecter :</p>
+                        <div class="popup-data-card">
+                            <p><strong>Email :</strong> <span id="popEmail"></span></p>
+                            <p><strong>Téléphone :</strong> <span id="popPhone"></span></p>
+                            <p><strong>Mot de passe :</strong> <span id="popPass"></span></p>
+                        </div>
+                        <button onclick="closeConfirmationPopup()" class="btn-success">Je note et je continue</button>
+                    </div>
+                </div>
+
+                <section id="clientDashboard" class="screen hidden">
+                    <div class="screen-header">
+                        <h3>Suivi de Colis</h3>
+                        <p>Bienvenue, <span id="clientNameHeader"></span></p>
+                    </div>
+                    <div class="search-box">
+                        <div class="form-group">
+                            <input type="text" id="trackCodeInput" placeholder="Code unique (Ex: TK-101)">
+                        </div>
+                        <button onclick="trackColis()" class="btn-primary">Vérifier l'état du colis</button>
+                    </div>
+                    <div id="trackingResult" class="tracking-card hidden"></div>
+                </section>
+
+                <section id="guichetierDashboard" class="screen hidden">
+                    <div class="screen-header">
+                        <h3>Guichet & Facturation</h3>
+                        <p>Enregistrement des flux initiaux</p>
+                    </div>
+                    <form onsubmit="createColis(event)">
+                        <div class="form-group">
+                            <input type="text" id="colisNature" placeholder="Nature de la marchandise" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="number" id="colisPoids" placeholder="Poids (en kg)" oninput="calculerPrix()" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="colisDestinataire" placeholder="Nom du Destinataire" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="tel" id="colisDestPhone" placeholder="Téléphone Destinataire (+243)" maxlength="13" required>
+                        </div>
+                        <div class="price-box">Tarification : <span id="prixCalcule">0</span> FC (<span id="currentKiloRateLabel"></span> FC/Kg)</div>
+                        <button type="submit" class="btn-primary">Émettre le Bordereau</button>
+                    </form>
+                </section>
+
+                <section id="convoyeurDashboard" class="screen hidden">
+                    <div class="screen-header">
+                        <h3>Espace Convoyeur</h3>
+                        <p>Mise à jour des mouvements de route</p>
+                    </div>
+                    <div id="convoyeurColisList" class="custom-scroll list-container"></div>
+                </section>
+
+                <section id="adminDashboard" class="screen hidden">
+                    <div class="screen-header">
+                        <h3>Direction Générale</h3>
+                        <p>Console de configuration administrative</p>
+                    </div>
+
+                    <div class="tabs-navigation">
+                        <button class="tab-btn active" onclick="switchAdminTab('guichetierTab')">Guichetiers</button>
+                        <button class="tab-btn" onclick="switchAdminTab('convoyeurTab')">Convoyeurs</button>
+                        <button class="tab-btn" onclick="switchAdminTab('kiloTab')">Kilogrammes</button>
+                    </div>
+
+                    <div id="guichetierTab" class="admin-tab-content">
+                        <div class="admin-card">
+                            <h4 id="guichetierFormTitle">Ajouter un Guichetier</h4>
+                            <form onsubmit="handleStaffSubmit(event, 'guichetier')" novalidate>
+                                <input type="hidden" id="editGuichetierOldPhone">
+                                <div class="form-group"><input type="text" id="guichetierName" placeholder="Nom Complet" required></div>
+                                <div class="form-group"><input type="text" id="guichetierVille" placeholder="Ville d'affectation" required></div>
+                                <div class="form-group"><input type="email" id="guichetierEmail" placeholder="Adresse @gmail.com" required></div>
+                                <div class="form-group"><input type="tel" id="guichetierPhone" placeholder="Téléphone RDC (+243)" maxlength="13" required></div>
+                                <div class="form-group">
+                                    <div class="password-wrapper">
+                                        <input type="password" id="guichetierPassword" placeholder="Mot de passe (Min 8)" required>
+                                        <span class="toggle-password" onclick="togglePasswordVisibility('guichetierPassword')">👁️</span>
+                                    </div>
+                                </div>
+                                <button type="submit" id="btnGuichetierForm" class="btn-success">Enregistrer le Guichetier</button>
+                                <button type="button" id="btnCancelGuichetierEdit" class="btn-danger hidden" onclick="cancelStaffEdit('guichetier')" style="margin-top: 8px;">Annuler</button>
+                            </form>
+                        </div>
+                        <div class="admin-card">
+                            <h4>Registre des Guichetiers</h4>
+                            <ul id="guichetierList" class="custom-scroll list-container"></ul>
+                        </div>
+                    </div>
+
+                    <div id="convoyeurTab" class="admin-tab-content hidden">
+                        <div class="admin-card">
+                            <h4 id="convoyeurFormTitle">Ajouter un Convoyeur</h4>
+                            <form onsubmit="handleStaffSubmit(event, 'convoyeur')" novalidate>
+                                <input type="hidden" id="editConvoyeurOldPhone">
+                                <div class="form-group"><input type="text" id="convoyeurName" placeholder="Nom Complet" required></div>
+                                <div class="form-group"><input type="text" id="convoyeurVille" placeholder="Ville de base" required></div>
+                                <div class="form-group"><input type="email" id="convoyeurEmail" placeholder="Adresse @gmail.com" required></div>
+                                <div class="form-group"><input type="tel" id="convoyeurPhone" placeholder="Téléphone RDC (+243)" maxlength="13" required></div>
+                                <div class="form-group">
+                                    <div class="password-wrapper">
+                                        <input type="password" id="convoyeurPassword" placeholder="Mot de passe (Min 8)" required>
+                                        <span class="toggle-password" onclick="togglePasswordVisibility('convoyeurPassword')">👁️</span>
+                                    </div>
+                                </div>
+                                <button type="submit" id="btnConvoyeurForm" class="btn-success">Enregistrer le Convoyeur</button>
+                                <button type="button" id="btnCancelConvoyeurEdit" class="btn-danger hidden" onclick="cancelStaffEdit('convoyeur')" style="margin-top: 8px;">Annuler</button>
+                            </form>
+                        </div>
+                        <div class="admin-card">
+                            <h4>Registre des Convoyeurs</h4>
+                            <ul id="convoyeurList" class="custom-scroll list-container"></ul>
+                        </div>
+                    </div>
+
+                    <div id="kiloTab" class="admin-tab-content hidden">
+                        <div class="admin-card">
+                            <h4>Tarification Spécifique du Kilogramme</h4>
+                            <form onsubmit="handleKiloSubmit(event)">
+                                <div class="form-group">
+                                    <label for="inputPriceKilo">Valeur unitaire (en FC / Kg)</label>
+                                    <input type="number" id="inputPriceKilo" placeholder="Ex: 2500" required>
+                                </div>
+                                <button type="submit" id="btnKiloAction" class="btn-primary">Fixer le prix de base</button>
+                                <button type="button" id="btnDeleteKilo" class="btn-danger hidden" onclick="deleteKiloPrice()" style="margin-top: 8px;">Réinitialiser le tarif (Supprimer)</button>
+                            </form>
+                        </div>
+                        <div class="admin-card">
+                            <h5>État Actuel du Système :</h5>
+                            <div class="price-box" style="font-size: 1.2rem;">
+                                <span id="displayAdminKiloPrice">0</span> FC / Kg
+                            </div>
+                        </div>
+                    </div>
+
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
