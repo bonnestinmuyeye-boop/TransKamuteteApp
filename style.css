@@ -11,42 +11,40 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: #cbd5e1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    background-color: var(--light); /* Fond clair uniforme */
+    display: block; /* Supprime le centrage du faux bloc */
     min-height: 100vh;
     margin: 0;
 }
 
-/* SMARTPHONE CASING (375px x 667px strict) */
+/* APPLICATION EN PLEIN ÉCRAN REEL (Remplacement du Smartphone Casing) */
 .phone-container {
-    width: 375px;
-    height: 667px;
-    background-color: var(--dark);
-    border-radius: 40px;
-    padding: 10px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-    border: 4px solid #64748b;
+    width: 100%;
+    height: 100vh;
+    background-color: var(--light);
+    border-radius: 0; /* Enlève les coins arrondis du faux téléphone */
+    padding: 0;       /* Enlève la marge interne du faux téléphone */
+    box-shadow: none; /* Enlève l'ombre portée */
+    border: none;     /* Supprime la bordure grise */
 }
 
 .phone-screen {
     width: 100%;
     height: 100%;
     background-color: var(--light);
-    border-radius: 32px;
+    border-radius: 0; /* Prend tout l'écran de manière native */
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    position: relative; /* CRITIQUE : Contient les absolutes comme le popup */
+    position: relative; 
 }
 
-/* 1. ÉCRAN DE CHARGEMENT INITIAL (SPLASH SCREEN) */
+/* 1. ÉCRAN DE CHARGEMENT INITIAL (SPLASH SCREEN PLEIN ÉCRAN) */
 .splash-container {
-    width: 375px;
-    height: 667px;
+    width: 100%;
+    height: 100vh;
     background: linear-gradient(135deg, var(--dark) 0%, #1e293b 100%);
-    border-radius: 40px;
+    border-radius: 0; /* Rendu fluide sur toute la dalle du smartphone */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -54,6 +52,10 @@ body {
     color: white;
     text-align: center;
     padding: 20px;
+    position: fixed; /* Reste bien au-dessus de tout pendant le chargement */
+    top: 0;
+    left: 0;
+    z-index: 9999;
 }
 .splash-logo {
     width: 90px;
@@ -154,10 +156,10 @@ button { padding: 14px; border: none; border-radius: 12px; font-size: 0.95rem; f
 .list-container { max-height: 170px; width: 100%; padding: 0; margin: 0; }
 li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e2e8f0; font-size: 0.85rem; }
 .action-group { display: flex; gap: 4px; }
-.btn-small { padding: 6px 10px; font-size: 0.7rem; border-radius: 6px; width: auto; }
+.btn-small { padding: 6px 10px; font-size: 0.7 ceramic; border-radius: 6px; width: auto; }
 .price-box { background-color: #e0f2fe; color: #0369a1; padding: 12px; border-radius: 12px; text-align: center; font-weight: 700; }
 
-/* CORRECTION DU POPUP MODAL (Confinement strict à l'écran du Smartphone) */
+/* CONFIGURATION DU POPUP MODAL EN PLEIN ÉCRAN DIRECT */
 .popup-overlay {
     position: absolute;
     top: 0;
