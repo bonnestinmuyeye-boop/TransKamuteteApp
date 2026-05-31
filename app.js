@@ -28,8 +28,8 @@ document.addEventListener("DOMContentLoaded", () => {
 function initSystemListeners() {
     updateKiloDisplay();
     
-    // Écoute dynamique de la liste globale des agents
     if (window.db && window.fs) {
+        // Écoute dynamique de la liste globale des agents
         window.fs.onSnapshot(window.fs.collection(window.db, "users"), (snapshot) => {
             renderStaffLists(snapshot);
         });
@@ -73,7 +73,6 @@ function switchScreen(screenId) {
 // ENGINE DE VALIDATION PAR REGEX
 const GMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
 const RDC_PHONE_REGEX = /^\+243\d{9}$/;
-const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
 
 function validateField(fieldId, regex, errorMessage) {
     const input = document.getElementById(fieldId);
@@ -129,7 +128,7 @@ async function handleLogin(event) {
 async function handleRegister(event) {
     event.preventDefault();
     if (!validateField('regEmail', GMAIL_REGEX, "Utiliser un compte @gmail.com") ||
-        !validateField('regPhone', RDC_PHONE_REGEX, "Numéro invalide (13 caractères)"));
+        !validateField('regPhone', RDC_PHONE_REGEX, "Numéro invalide (13 caractères)")) return;
 
     const name = document.getElementById('regName').value.trim();
     const email = document.getElementById('regEmail').value.trim();
@@ -173,6 +172,7 @@ function redirectUserToDashboard(role) {
     }
 }
 
+// LOGOUT
 function logout() {
     currentUser = null;
     localStorage.removeItem('deviceSessionUser');
@@ -388,37 +388,55 @@ function renderConvoyeurColis(snapshot) {
     }
 }
 
+// MISE À JOUR DU STATUT PAR LE CONVOYEUR
 async function updateStatutCloud(code, newStatut) {
     if (!newStatut) return;
     try {
-        await window.fs.updateDoc(window.fs.doc(window.db, "colis", code), { statut: newStatut });
-    } catch(e) { alert("Échec de la mutation d'état."); }
+        await window.fs.updateDoc(window.fs.doc(window.db, "colis", code), {
+            statut: newStatut
+        });
+        alert(`Le colis ${code} est maintenant : ${newStatut}`);
+    } catch(e) {
+        alert("Erreur lors de la mise à jour du statut.");
+    }
 }
 
+// SUIVI DE COLIS PAR LE CLIENT (INTERROGE LE CLOUD)
 async function trackColis() {
     const code = document.getElementById('trackCodeInput').value.trim().toUpperCase();
-    const resDiv = document.getElementById('trackingResult');
-    resDiv.classList.remove('hidden');
-
+    const resultDiv = document.getElementById('trackingResult');
+    
     if (!code) {
-        resDiv.innerHTML = "<p style='color:var(--danger); margin:0;'>Veuillez entrer un code valide.</p>";
+        alert("Veuillez saisir un code de suivi valide.");
         return;
     }
 
     try {
-        const docSnap = await window.fs.getDoc(window.fs.doc(window.db, "colis", code));
+        const docRef = window.fs.doc(window.db, "colis", code);
+        const docSnap = await window.fs.getDoc(docRef);
+
+        resultDiv.classList.remove('hidden');
 
         if (docSnap.exists()) {
             const colis = docSnap.data();
-            resDiv.innerHTML = `
-                <h4 style="margin:0 0 6px 0;">Colis localisé : ${colis.code}</h4>
-                <p style="margin:2px 0; font-size:0.85rem;"><strong>Marchandise :</strong> ${colis.nature} (${colis.poids} kg)</p>
-                <p style="margin:2px 0; font-size:0.85rem;"><strong>Destinataire :</strong> ${colis.destinataire}</p>
-                <div style="margin-top:8px; padding:8px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; color:#15803d; font-size:0.85rem;">
-                    <strong>Position actuelle :</strong> ${colis.statut}
-                </div>`;
+            resultDiv.innerHTML = `
+                <h5>Résultat pour : ${colis.code}</h5>
+                <p><strong>Marchandise :</strong> ${colis.nature}</p>
+                <p><strong>Poids :</strong> ${colis.poids} Kg</p>
+                <p><strong>Destinataire :</strong> ${colis.destinataire}</p>
+                <p><strong>Frais payés :</strong> ${colis.prix} FC</p>
+                <div class="price-box" style="margin-top:10px; background-color:rgba(0,123,255,0.1); color:var(--primary);">
+                    <strong>Statut actuel :</strong> ${colis.statut}
+                </div>
+            `;
         } else {
-            resDiv.innerHTML = `<p style="color:var(--danger); margin:0;">Code "${code}" introuvable sur le cloud.</p>`;
+            resultDiv.innerHTML = `
+                <p style="color:red; font-weight:bold; margin:0;">
+                    Aucun colis trouvé avec le code "${code}". Vérifiez la saisie.
+                </p>
+            `;
         }
-    } catch(e) { resDiv.innerHTML = "Erreur de requêtage cloud."; }
+    } catch (e) {
+        alert("Erreur lors de la récupération des informations de suivi.");
+    }
 }
