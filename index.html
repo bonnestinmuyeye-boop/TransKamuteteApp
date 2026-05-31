@@ -243,6 +243,31 @@
         </div>
     </div>
 
+    <!-- SDK Firebase Modules (CDN) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot } 
+        from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Ta configuration exacte récupérée depuis ton projet Firebase Cloud
+        const firebaseConfig = {
+            apiKey: "AIzaSyB8IuMLM-l961e0SL0gIk1YVtmu2fcCeS4",
+            authDomain: "transkamuteteapp.firebaseapp.com",
+            projectId: "transkamuteteapp",
+            storageBucket: "transkamuteteapp.firebasestorage.app",
+            messagingSenderId: "360060778289",
+            appId: "1:360060778289:web:cceea4d3e740e851f5e210"
+        };
+
+        // Initialisation de l'instance
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Exportation globale sécurisée vers app.js
+        window.db = db;
+        window.fs = { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot };
+    </script>
+
     <script src="app.js"></script>
 </body>
 </html>
