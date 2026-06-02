@@ -112,16 +112,36 @@
 
                 <section id="clientDashboard" class="screen hidden">
                     <div class="screen-header">
-                        <h3>Suivi de Colis</h3>
+                        <h3>Espace Client</h3>
                         <p>Bienvenue, <span id="clientNameHeader"></span></p>
                     </div>
-                    <div class="search-box">
-                        <div class="form-group">
-                            <input type="text" id="trackCodeInput" placeholder="Code unique (Ex: TK-101)">
-                        </div>
-                        <button onclick="trackColis()" class="btn-primary">Vérifier l'état du colis</button>
+
+                    <div class="tabs-navigation">
+                        <button class="tab-btn active" id="btnClientTrack" onclick="switchClientTab('clientTrackTab')">Consultez le colis</button>
+                        <button class="tab-btn" id="btnClientChat" onclick="switchClientTab('clientChatTab')">Discuter</button>
                     </div>
-                    <div id="trackingResult" class="tracking-card hidden"></div>
+
+                    <div id="clientTrackTab" class="client-tab-content">
+                        <div class="search-box admin-card">
+                            <div class="form-group">
+                                <input type="text" id="trackCodeInput" placeholder="Code unique (Ex: TK-101)">
+                            </div>
+                            <button onclick="trackColis()" class="btn-primary">Vérifier l'état du colis</button>
+                        </div>
+                        <div id="trackingResult" class="tracking-card hidden"></div>
+                    </div>
+
+                    <div id="clientChatTab" class="client-tab-content hidden">
+                        <div class="chat-wrapper">
+                            <div class="chat-messages custom-scroll" id="clientChatMessages">
+                                </div>
+                            <div class="chat-input-bar">
+                                <input type="text" id="clientChatMessageInput" placeholder="Écrire un message...">
+                                <button class="chat-audio-btn" onclick="simulateAudioRecord('client')" title="Enregistrer un audio">🎙️</button>
+                                <button class="chat-send-btn" onclick="sendChatMessage('client')">➔</button>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <section id="guichetierDashboard" class="screen hidden">
@@ -161,10 +181,12 @@
                         <p>Console de configuration administrative</p>
                     </div>
 
-                    <div class="tabs-navigation">
+                    <div class="tabs-navigation admin-tabs-scroll custom-scroll">
                         <button class="tab-btn active" onclick="switchAdminTab('guichetierTab')">Guichetiers</button>
                         <button class="tab-btn" onclick="switchAdminTab('convoyeurTab')">Convoyeurs</button>
                         <button class="tab-btn" onclick="switchAdminTab('kiloTab')">Kilogrammes</button>
+                        <button class="tab-btn" onclick="switchAdminTab('manageClientsTab')">Clients</button>
+                        <button class="tab-btn" onclick="switchAdminTab('manageColisTab')">Colis</button>
                     </div>
 
                     <div id="guichetierTab" class="admin-tab-content">
@@ -234,6 +256,36 @@
                             <div class="price-box" style="font-size: 1.2rem;">
                                 <span id="displayAdminKiloPrice">0</span> FC / Kg
                             </div>
+                        </div>
+                    </div>
+
+                    <div id="manageClientsTab" class="admin-tab-content hidden">
+                        <div class="admin-card" id="adminClientListZone">
+                            <h4>Discussions Clients</h4>
+                            <div class="whatsapp-list custom-scroll" id="adminWhatsAppClientList">
+                                </div>
+                        </div>
+                        
+                        <div class="admin-card hidden" id="adminChatContainerZone">
+                            <div class="chat-header-admin">
+                                <button class="btn-small btn-primary" onclick="backToAdminClientList()">⬅ Retour</button>
+                                <span id="adminChatTargetName" style="font-weight: 800; margin-left: 10px;">Discussion</span>
+                            </div>
+                            <div class="chat-wrapper" style="height: 300px;">
+                                <div class="chat-messages custom-scroll" id="adminChatMessages"></div>
+                                <div class="chat-input-bar">
+                                    <input type="text" id="adminChatMessageInput" placeholder="Répondre au client...">
+                                    <button class="chat-audio-btn" onclick="simulateAudioRecord('admin')" title="Enregistrer un audio">🎙️</button>
+                                    <button class="chat-send-btn" onclick="sendChatMessage('admin')">➔</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="manageColisTab" class="admin-tab-content hidden">
+                        <div class="admin-card">
+                            <h4>Suivi Global Temps Réel des Colis</h4>
+                            <div id="adminGlobalColisList" class="custom-scroll list-container" style="max-height: 400px;"></div>
                         </div>
                     </div>
 
