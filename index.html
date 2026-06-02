@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trans Kamutete - ERP Mobile v3.0</title>
+    <title>Trans Kamutete - ERP Mobile v3.5</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -124,9 +124,10 @@
                     <div id="trackTab" class="client-tab-content">
                         <div class="search-box">
                             <div class="form-group">
-                                <input type="text" id="trackCodeInput" placeholder="Code unique (Ex: TK-101)">
+                                <label for="trackCodeInput">Numéro de tracking / Code unique</label>
+                                <input type="text" id="trackCodeInput" placeholder="Ex: TK-101">
                             </div>
-                            <button onclick="trackColis()" class="btn-primary">Vérifier l'état du colis</button>
+                            <button onclick="trackColis()" class="btn-primary" style="margin-top: 10px;">Vérifier l'état du colis</button>
                         </div>
                         <div id="trackingResult" class="tracking-card hidden"></div>
                     </div>
@@ -136,15 +137,14 @@
                             <div class="chat-header">
                                 <div class="chat-avatar">🎧</div>
                                 <div class="chat-user-info">
-                                    <span class="chat-user-name">Support Client (Trans Kamutete)</span>
+                                    <span class="chat-user-name">Direction (Trans Kamutete)</span>
                                     <span class="chat-user-status">Sécurisé de bout en bout</span>
                                 </div>
                             </div>
-                            <div id="clientMessageArea" class="chat-messages custom-scroll">
-                                </div>
+                            <div id="clientMessageArea" class="chat-messages custom-scroll"></div>
                             <div class="chat-input-bar">
                                 <input type="text" id="clientChatInput" placeholder="Écrire un message...">
-                                <button type="button" class="btn-audio" onclick="simulateAudioRecord('client')">🎙️</button>
+                                <button type="button" id="btnAudio-client" class="btn-audio" onclick="toggleAudioRecording('client')">🎙️</button>
                                 <button type="button" class="btn-send" onclick="sendChatMessage('client')">🚀</button>
                             </div>
                         </div>
@@ -152,34 +152,88 @@
                 </section>
 
                 <section id="guichetierDashboard" class="screen hidden">
-                    <div class="screen-header">
-                        <h3>Guichet & Facturation</h3>
-                        <p>Enregistrement des flux initiaux</p>
+                    <div class="tabs-navigation">
+                        <button class="tab-btn active" id="btnTabGuichetForm" onclick="switchGuichetierTab('guichetFormTab')">Nouveau Colis</button>
+                        <button class="tab-btn" id="btnTabGuichetChat" onclick="switchGuichetierTab('guichetChatTab')">Chat Direction</button>
                     </div>
-                    <form onsubmit="createColis(event)">
-                        <div class="form-group">
-                            <input type="text" id="colisNature" placeholder="Nature de la marchandise" required>
+
+                    <div id="guichetFormTab" class="guichetier-tab-content">
+                        <div class="screen-header">
+                            <h3>Guichet & Facturation</h3>
+                            <p>Enregistrement des flux initiaux</p>
                         </div>
-                        <div class="form-group">
-                            <input type="number" id="colisPoids" placeholder="Poids (en kg)" oninput="calculerPrix()" required>
+                        <form onsubmit="createColis(event)">
+                            <div class="form-group">
+                                <label for="colisNature">Nature de la marchandise</label>
+                                <input type="text" id="colisNature" placeholder="Ex: Sac de Farine, Cartons" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="colisPoids">Poids de la cargaison (en kg)</label>
+                                <input type="number" id="colisPoids" placeholder="Ex: 25" oninput="calculerPrix()" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="colisDestinataire">Nom Complet du Destinataire</label>
+                                <input type="text" id="colisDestinataire" placeholder="Ex: Destinataire" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="colisDestPhone">Numéro de téléphone du Destinataire</label>
+                                <input type="tel" id="colisDestPhone" placeholder="Ex: +243XXXXXXXXX" maxlength="13" required>
+                            </div>
+                            <div class="price-box">Tarification : <span id="prixCalcule">0</span> FC (<span id="currentKiloRateLabel"></span> FC/Kg)</div>
+                            <button type="submit" class="btn-primary" style="margin-top: 10px;">Émettre le Bordereau</button>
+                        </form>
+                    </div>
+
+                    <div id="guichetChatTab" class="guichetier-tab-content hidden">
+                        <div class="whatsapp-chat-container">
+                            <div class="chat-header">
+                                <div class="chat-avatar">🏢</div>
+                                <div class="chat-user-info">
+                                    <span class="chat-user-name">Direction Générale</span>
+                                    <span class="chat-user-status">Canal Guichet Sécurisé</span>
+                                </div>
+                            </div>
+                            <div id="guichetierMessageArea" class="chat-messages custom-scroll"></div>
+                            <div class="chat-input-bar">
+                                <input type="text" id="guichetierChatInput" placeholder="Écrire à la direction...">
+                                <button type="button" id="btnAudio-guichetier" class="btn-audio" onclick="toggleAudioRecording('guichetier')">🎙️</button>
+                                <button type="button" class="btn-send" onclick="sendChatMessage('guichetier')">🚀</button>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <input type="text" id="colisDestinataire" placeholder="Nom du Destinataire" required>
-                        </div>
-                        <div class="form-group">
-                            <input type="tel" id="colisDestPhone" placeholder="Téléphone Destinataire (+243)" maxlength="13" required>
-                        </div>
-                        <div class="price-box">Tarification : <span id="prixCalcule">0</span> FC (<span id="currentKiloRateLabel"></span> FC/Kg)</div>
-                        <button type="submit" class="btn-primary">Émettre le Bordereau</button>
-                    </form>
+                    </div>
                 </section>
 
                 <section id="convoyeurDashboard" class="screen hidden">
-                    <div class="screen-header">
-                        <h3>Espace Convoyeur</h3>
-                        <p>Mise à jour des mouvements de route</p>
+                    <div class="tabs-navigation">
+                        <button class="tab-btn active" id="btnTabConvoyeurList" onclick="switchConvoyeurTab('convoyeurListTab')">Feuilles de Route</button>
+                        <button class="tab-btn" id="btnTabConvoyeurChat" onclick="switchConvoyeurTab('convoyeurChatTab')">Chat Direction</button>
                     </div>
-                    <div id="convoyeurColisList" class="custom-scroll list-container"></div>
+
+                    <div id="convoyeurListTab" class="convoyeur-tab-content">
+                        <div class="screen-header">
+                            <h3>Espace Convoyeur</h3>
+                            <p>Mise à jour des mouvements de route</p>
+                        </div>
+                        <div id="convoyeurColisList" class="custom-scroll list-container"></div>
+                    </div>
+
+                    <div id="convoyeurChatTab" class="convoyeur-tab-content hidden">
+                        <div class="whatsapp-chat-container">
+                            <div class="chat-header">
+                                <div class="chat-avatar">🏢</div>
+                                <div class="chat-user-info">
+                                    <span class="chat-user-name">Direction Générale</span>
+                                    <span class="chat-user-status">Canal Logistique Sécurisé</span>
+                                </div>
+                            </div>
+                            <div id="convoyeurMessageArea" class="chat-messages custom-scroll"></div>
+                            <div class="chat-input-bar">
+                                <input type="text" id="convoyeurChatInput" placeholder="Écrire à la direction...">
+                                <button type="button" id="btnAudio-convoyeur" class="btn-audio" onclick="toggleAudioRecording('convoyeur')">🎙️</button>
+                                <button type="button" class="btn-send" onclick="sendChatMessage('convoyeur')">🚀</button>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <section id="adminDashboard" class="screen hidden">
@@ -192,7 +246,7 @@
                         <button class="tab-btn active" onclick="switchAdminTab('guichetierTab')">Guichetiers</button>
                         <button class="tab-btn" onclick="switchAdminTab('convoyeurTab')">Convoyeurs</button>
                         <button class="tab-btn" onclick="switchAdminTab('kiloTab')">Kilogrammes</button>
-                        <button class="tab-btn" onclick="switchAdminTab('manageClientsTab')">Clients</button>
+                        <button class="tab-btn" onclick="switchAdminTab('manageClientsTab')">Messagerie</button>
                         <button class="tab-btn" onclick="switchAdminTab('manageColisTab')">Colis</button>
                     </div>
 
@@ -201,18 +255,30 @@
                             <h4 id="guichetierFormTitle">Ajouter un Guichetier</h4>
                             <form onsubmit="handleStaffSubmit(event, 'guichetier')" novalidate>
                                 <input type="hidden" id="editGuichetierOldPhone">
-                                <div class="form-group"><input type="text" id="guichetierName" placeholder="Nom Complet" required></div>
-                                <div class="form-group"><input type="text" id="guichetierVille" placeholder="Ville d'affectation" required></div>
-                                <div class="form-group"><input type="email" id="guichetierEmail" placeholder="Adresse @gmail.com" required></div>
-                                <div class="form-group"><input type="tel" id="guichetierPhone" placeholder="Téléphone RDC (+243)" maxlength="13" required></div>
                                 <div class="form-group">
+                                    <label for="guichetierName">Nom Complet du Guichetier</label>
+                                    <input type="text" id="guichetierName" placeholder="Ex: Falonne Makonga" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="guichetierVille">Ville d'affectation / Bureau</label>
+                                    <input type="text" id="guichetierVille" placeholder="Ex: Kamina" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="guichetierEmail">Adresse Gmail Professionnelle</label>
+                                    <input type="email" id="guichetierEmail" placeholder="nom@gmail.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="guichetierPhone">Numéro de téléphone RDC</label>
+                                    <input type="tel" id="guichetierPhone" placeholder="+243XXXXXXXXX" maxlength="13" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="guichetierPassword">Clé de sécurité / Mot de passe</label>
                                     <div class="password-wrapper">
-                                        <input type="password" id="guichetierPassword" placeholder="Mot de passe (Min 8)" required>
+                                        <input type="password" id="guichetierPassword" placeholder="Min 8 caractères" required>
                                         <span class="toggle-password" onclick="togglePasswordVisibility('guichetierPassword')">👁️</span>
                                     </div>
                                 </div>
-                                <button type="submit" id="btnGuichetierForm" class="btn-success">Enregistrer le Guichetier</button>
-                                <button type="button" id="btnCancelGuichetierEdit" class="btn-danger hidden" onclick="cancelStaffEdit('guichetier')" style="margin-top: 8px;">Annuler</button>
+                                <button type="submit" id="btnGuichetierForm" class="btn-success" style="margin-top: 10px;">Enregistrer le Guichetier</button>
                             </form>
                         </div>
                         <div class="admin-card">
@@ -226,18 +292,30 @@
                             <h4 id="convoyeurFormTitle">Ajouter un Convoyeur</h4>
                             <form onsubmit="handleStaffSubmit(event, 'convoyeur')" novalidate>
                                 <input type="hidden" id="editConvoyeurOldPhone">
-                                <div class="form-group"><input type="text" id="convoyeurName" placeholder="Nom Complet" required></div>
-                                <div class="form-group"><input type="text" id="convoyeurVille" placeholder="Ville de base" required></div>
-                                <div class="form-group"><input type="email" id="convoyeurEmail" placeholder="Adresse @gmail.com" required></div>
-                                <div class="form-group"><input type="tel" id="convoyeurPhone" placeholder="Téléphone RDC (+243)" maxlength="13" required></div>
                                 <div class="form-group">
+                                    <label for="convoyeurName">Nom Complet du Chauffeur/Convoyeur</label>
+                                    <input type="text" id="convoyeurName" placeholder="Ex: Atlas Kayembe" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="convoyeurVille">Ville d'attache / Base logistique</label>
+                                    <input type="text" id="convoyeurVille" placeholder="Ex: Lubumbashi" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="convoyeurEmail">Adresse Gmail</label>
+                                    <input type="email" id="convoyeurEmail" placeholder="nom@gmail.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="convoyeurPhone">Numéro de téléphone RDC</label>
+                                    <input type="tel" id="convoyeurPhone" placeholder="+243XXXXXXXXX" maxlength="13" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="convoyeurPassword">Clé de connexion</label>
                                     <div class="password-wrapper">
-                                        <input type="password" id="convoyeurPassword" placeholder="Mot de passe (Min 8)" required>
+                                        <input type="password" id="convoyeurPassword" placeholder="Min 8 caractères" required>
                                         <span class="toggle-password" onclick="togglePasswordVisibility('convoyeurPassword')">👁️</span>
                                     </div>
                                 </div>
-                                <button type="submit" id="btnConvoyeurForm" class="btn-success">Enregistrer le Convoyeur</button>
-                                <button type="button" id="btnCancelConvoyeurEdit" class="btn-danger hidden" onclick="cancelStaffEdit('convoyeur')" style="margin-top: 8px;">Annuler</button>
+                                <button type="submit" id="btnConvoyeurForm" class="btn-success" style="margin-top: 10px;">Enregistrer le Convoyeur</button>
                             </form>
                         </div>
                         <div class="admin-card">
@@ -251,11 +329,10 @@
                             <h4>Tarification Spécifique du Kilogramme</h4>
                             <form onsubmit="handleKiloSubmit(event)">
                                 <div class="form-group">
-                                    <label for="inputPriceKilo">Valeur unitaire (en FC / Kg)</label>
+                                    <label for="inputPriceKilo">Valeur unitaire globale (en FC / Kg)</label>
                                     <input type="number" id="inputPriceKilo" placeholder="Ex: 2500" required>
                                 </div>
-                                <button type="submit" id="btnKiloAction" class="btn-primary">Fixer le prix de base</button>
-                                <button type="button" id="btnDeleteKilo" class="btn-danger hidden" onclick="deleteKiloPrice()" style="margin-top: 8px;">Réinitialiser le tarif (Supprimer)</button>
+                                <button type="submit" id="btnKiloAction" class="btn-primary" style="margin-top: 10px;">Fixer le prix de base</button>
                             </form>
                         </div>
                         <div class="admin-card">
@@ -269,28 +346,26 @@
                     <div id="manageClientsTab" class="admin-tab-content hidden">
                         <div class="admin-whatsapp-wrapper">
                             <div class="admin-chat-sidebar">
-                                <h5>Clients Inscrits</h5>
-                                <div id="adminChatUserList" class="chat-users-list custom-scroll">
-                                    </div>
+                                <h5>Membres & Flux</h5>
+                                <div id="adminChatUserList" class="chat-users-list custom-scroll"></div>
                             </div>
                             <div class="admin-chat-main-zone hidden" id="adminChatMainZone">
                                 <div class="chat-header">
                                     <div class="chat-avatar">👤</div>
                                     <div class="chat-user-info">
-                                        <span class="chat-user-name" id="adminSelectedClientName">Client</span>
+                                        <span class="chat-user-name" id="adminSelectedClientName">Utilisateur</span>
                                         <span class="chat-user-status" id="adminSelectedClientPhone">Néant</span>
                                     </div>
                                 </div>
-                                <div id="adminMessageArea" class="chat-messages custom-scroll">
-                                    </div>
+                                <div id="adminMessageArea" class="chat-messages custom-scroll"></div>
                                 <div class="chat-input-bar">
-                                    <input type="text" id="adminChatInput" placeholder="Écrire une réponse...">
-                                    <button type="button" class="btn-audio" onclick="simulateAudioRecord('admin')">🎙️</button>
+                                    <input type="text" id="adminChatInput" placeholder="Écrire un message...">
+                                    <button type="button" id="btnAudio-admin" class="btn-audio" onclick="toggleAudioRecording('admin')">🎙️</button>
                                     <button type="button" class="btn-send" onclick="sendChatMessage('admin')">🚀</button>
                                 </div>
                             </div>
                             <div class="admin-chat-placeholder" id="adminChatPlaceholder">
-                                <p>💬 Sélectionnez un client dans la liste pour ouvrir sa discussion en temps réel.</p>
+                                <p>💬 Sélectionnez un client, guichetier ou convoyeur pour ouvrir une discussion instantanée sécurisée.</p>
                             </div>
                         </div>
                     </div>
@@ -298,14 +373,11 @@
                     <div id="manageColisTab" class="admin-tab-content hidden">
                         <div class="admin-card">
                             <h4>Supervision Globale de tous les Colis</h4>
-                            <p style="font-size: 0.8rem; color: #64748b; margin-top: -8px;">Visualisez l'état global et supprimez les colis finalisés/livrés.</p>
-                            <div id="adminGlobalColisContainer" class="custom-scroll list-container" style="max-height: 400px;">
-                                </div>
+                            <div id="adminGlobalColisContainer" class="custom-scroll list-container" style="max-height: 400px;"></div>
                         </div>
                     </div>
 
                 </section>
-
             </main>
         </div>
     </div>
@@ -330,7 +402,6 @@
         window.db = db;
         window.fs = { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot, orderBy };
     </script>
-
     <script src="app.js"></script>
 </body>
 </html>
