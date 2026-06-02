@@ -5,46 +5,47 @@
     --dark: #0f172a;
     --light: #f8fafc;
     --border: #cbd5e1;
+    --wa-bg: #efeae2; /* Fond de discussion WhatsApp */
+    --wa-out: #d9fdd3; /* Bulle verte WhatsApp sortante */
+    --wa-in: #ffffff;  /* Bulle blanche WhatsApp entrante */
 }
 
 * { box-sizing: border-box; transition: all 0.25s ease-in-out; }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: var(--light); /* Fond clair uniforme */
-    display: block; /* Supprime le centrage du faux bloc */
+    background-color: var(--light);
+    display: block;
     min-height: 100vh;
     margin: 0;
 }
 
-/* APPLICATION EN PLEIN ÉCRAN REEL (Remplacement du Smartphone Casing) */
 .phone-container {
     width: 100%;
     height: 100vh;
     background-color: var(--light);
-    border-radius: 0; /* Enlève les coins arrondis du faux téléphone */
-    padding: 0;       /* Enlève la marge interne du faux téléphone */
-    box-shadow: none; /* Enlève l'ombre portée */
-    border: none;     /* Supprime la bordure grise */
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    border: none;
 }
 
 .phone-screen {
     width: 100%;
     height: 100%;
     background-color: var(--light);
-    border-radius: 0; /* Prend tout l'écran de manière native */
+    border-radius: 0;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     position: relative; 
 }
 
-/* 1. ÉCRAN DE CHARGEMENT INITIAL (SPLASH SCREEN PLEIN ÉCRAN) */
 .splash-container {
     width: 100%;
     height: 100vh;
     background: linear-gradient(135deg, var(--dark) 0%, #1e293b 100%);
-    border-radius: 0; /* Rendu fluide sur toute la dalle du smartphone */
+    border-radius: 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -52,7 +53,7 @@ body {
     color: white;
     text-align: center;
     padding: 20px;
-    position: fixed; /* Reste bien au-dessus de tout pendant le chargement */
+    position: fixed;
     top: 0;
     left: 0;
     z-index: 9999;
@@ -75,7 +76,6 @@ body {
 
 @keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
-/* 2. LOGIQUE DU CAMION ANIMÉ */
 .truck-animation-zone {
     width: 100%;
     height: 60px;
@@ -100,7 +100,6 @@ body {
 }
 @keyframes drive { 0% { left: -50px; } 100% { left: 100%; } }
 
-/* EN-TÊTE ET CADRE APP */
 .app-header {
     background-color: var(--primary);
     color: white;
@@ -121,7 +120,6 @@ body {
 
 .hidden { display: none !important; }
 
-/* REFACTORING DES COMPOSANTS FORMULAIRES */
 .form-group { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 label { font-size: 0.75rem; color: #475569; font-weight: 700; text-transform: uppercase; }
 input, select { width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: 12px; font-size: 0.95rem; }
@@ -140,26 +138,24 @@ button { padding: 14px; border: none; border-radius: 12px; font-size: 0.95rem; f
 .switch-text { text-align: center; font-size: 0.9rem; color: #64748b; }
 .switch-text a { color: var(--primary); text-decoration: none; font-weight: 700; }
 
-/* COMPOSANT DES ONGLETS (TABS ADM) */
 .tabs-navigation { display: flex; background-color: #e2e8f0; border-radius: 14px; padding: 4px; gap: 2px; }
+.admin-tabs-scroll { overflow-x: auto; white-space: nowrap; max-width: 100%; }
 .tab-btn { flex: 1; padding: 10px 4px; font-size: 0.8rem; border-radius: 10px; background: transparent; color: #475569; font-weight: 700; }
 .tab-btn.active { background-color: white; color: var(--primary); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-.admin-tab-content { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+.admin-tab-content, .client-tab-content { display: flex; flex-direction: column; gap: 16px; width: 100%; }
 
-/* LE SCROLLER INTÉGRIÉ (ASCENSEUR ERGONOMIQUE) */
 .custom-scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
-.custom-scroll::-webkit-scrollbar { width: 5px; }
+.custom-scroll::-webkit-scrollbar { width: 5px; height: 5px; }
 .custom-scroll::-webkit-scrollbar-track { background: transparent; }
 .custom-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
 
 .admin-card, .tracking-card { background: white; padding: 16px; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px; }
-.list-container { max-height: 170px; width: 100%; padding: 0; margin: 0; }
+.list-container { max-height: 250px; width: 100%; padding: 0; margin: 0; }
 li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #e2e8f0; font-size: 0.85rem; }
 .action-group { display: flex; gap: 4px; }
-.btn-small { padding: 6px 10px; font-size: 0.7 ceramic; border-radius: 6px; width: auto; }
+.btn-small { padding: 6px 10px; font-size: 0.75rem; border-radius: 6px; width: auto; }
 .price-box { background-color: #e0f2fe; color: #0369a1; padding: 12px; border-radius: 12px; text-align: center; font-weight: 700; }
 
-/* CONFIGURATION DU POPUP MODAL EN PLEIN ÉCRAN DIRECT */
 .popup-overlay {
     position: absolute;
     top: 0;
@@ -186,3 +182,133 @@ li { display: flex; justify-content: space-between; align-items: center; padding
 .popup-box p { font-size: 0.8rem; color: #475569; margin: 0 0 12px 0; line-height: 1.4; }
 .popup-data-card { background-color: #f1f5f9; padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 0.8rem; text-align: left; word-break: break-all; }
 .popup-data-card p { margin: 6px 0; color: var(--dark); }
+
+/* ==========================================
+   DESIGN COMPOSANTS MESSAGERIE (STYLE WHATSAPP)
+   ========================================== */
+.chat-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 380px;
+    background-color: var(--wa-bg);
+    border-radius: 16px;
+    border: 1px solid #cbd5e1;
+    overflow: hidden;
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Bulles de discussion */
+.chat-bubble {
+    max-width: 75%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    line-height: 1.4;
+    position: relative;
+    word-wrap: break-word;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+}
+.chat-bubble.sent {
+    background-color: var(--wa-out);
+    align-self: flex-end;
+    border-top-right-radius: 2px;
+}
+.chat-bubble.received {
+    background-color: var(--wa-in);
+    align-self: flex-start;
+    border-top-left-radius: 2px;
+}
+
+.chat-time {
+    display: block;
+    font-size: 0.65rem;
+    color: #64748b;
+    text-align: right;
+    margin-top: 4px;
+}
+
+/* Audio stylisé */
+.audio-msg {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+}
+
+/* Barre de saisie chat */
+.chat-input-bar {
+    display: flex;
+    padding: 8px;
+    background-color: #f0f2f5;
+    gap: 6px;
+    align-items: center;
+}
+.chat-input-bar input {
+    flex: 1;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+.chat-input-bar input:focus {
+    transform: none;
+    background-color: white;
+}
+.chat-audio-btn, .chat-send-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.chat-audio-btn { background-color: #cbd5e1; color: var(--dark); }
+.chat-send-btn { background-color: var(--success); color: white; }
+
+/* Liste WhatsApp pour Admin */
+.whatsapp-list {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+.wa-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 8px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    gap: 12px;
+}
+.wa-item:hover { background-color: #f8fafc; }
+.wa-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background-color: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+.wa-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.wa-name-row { display: flex; justify-content: space-between; align-items: center; }
+.wa-name { font-weight: 700; font-size: 0.9rem; color: var(--dark); }
+.wa-preview { font-size: 0.8rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+
+.chat-header-admin {
+    display: flex;
+    align-items: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+}
