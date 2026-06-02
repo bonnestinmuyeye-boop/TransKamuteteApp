@@ -3,6 +3,7 @@
 // ==========================================
 let currentUser = null;
 let isEditingStaff = false;
+let activeAdminChatPhone = null; // Stocke le numéro du client dont l'admin a ouvert la discussion
 
 // INTERCEPTOR : APPLICATION LIFECYCLE
 document.addEventListener("DOMContentLoaded", () => {
@@ -29,18 +30,20 @@ function initSystemListeners() {
     updateKiloDisplay();
     
     if (window.db && window.fs) {
-        // Écoute dynamique de la liste globale des agents
+        // Écoute dynamique de la liste globale des agents et clients
         window.fs.onSnapshot(window.fs.collection(window.db, "users"), (snapshot) => {
             renderStaffLists(snapshot);
+            renderAdminWhatsAppClients(snapshot);
         });
 
         // Écoute dynamique de la liste globale des colis
         window.fs.onSnapshot(window.fs.collection(window.db, "colis"), (snapshot) => {
             renderConvoyeurColis(snapshot);
+            renderAdminGlobalColis(snapshot); // Écoute pour l'onglet "Gérer colis" de l'admin
         });
 
         // Écoute dynamique des variations du prix du kilo
-        window.fs.onSnapshot(window.fs.doc(window.db, "config", "tarifs"), (docSnap) => {
+        window.fs.doc(window.fs.doc(window.db, "config", "tarifs"), (docSnap) => {
             if (docSnap.exists()) {
                 const price = docSnap.data().kiloPrice || "2500";
                 localStorage.setItem('kiloPrice', price);
@@ -163,12 +166,18 @@ function closeConfirmationPopup() {
 
 function redirectUserToDashboard(role) {
     document.getElementById('logoutBtn').classList.remove('hidden');
-    if (role === 'admin') switchScreen('adminDashboard');
-    else if (role === 'guichetier') { updateKiloDisplay(); switchScreen('guichetierDashboard'); }
-    else if (role === 'convoyeur') { switchScreen('convoyeurDashboard'); }
-    else if (role === 'client') {
+    if (role === 'admin') {
+        switchScreen('adminDashboard');
+        switchAdminTab('guichetierTab');
+    } else if (role === 'guichetier') { 
+        updateKiloDisplay(); 
+        switchScreen('guichetierDashboard'); 
+    } else if (role === 'convoyeur') { 
+        switchScreen('convoyeurDashboard'); 
+    } else if (role === 'client') {
         document.getElementById('clientNameHeader').innerText = currentUser.name;
         switchScreen('clientDashboard');
+        switchClientTab('clientTrackTab');
     }
 }
 
@@ -180,13 +189,30 @@ function logout() {
     switchScreen('loginScreen');
 }
 
+// BASCULEMENT DES ONGLETS CLIENT
+function switchClientTab(tabId) {
+    document.querySelectorAll('.client-tab-content').forEach(c => c.classList.add('hidden'));
+    document.querySelectorAll('#clientDashboard .tab-btn').forEach(b => b.classList.remove('active'));
+    
+    document.getElementById(tabId).classList.remove('hidden');
+    if(tabId === 'clientTrackTab') document.getElementById('btnClientTrack').classList.add('active');
+    if(tabId === 'clientChatTab') {
+        document.getElementById('btnClientChat').classList.add('active');
+        initChatListener(currentUser.phone, 'clientChatMessages');
+    }
+}
+
 // CONSOLE ADMINISTRATIVE ET PASSAGE D'ONGLETS
 function switchAdminTab(tabId) {
     document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.add('hidden'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#adminDashboard .tab-btn').forEach(b => b.classList.remove('active'));
     
     document.getElementById(tabId).classList.remove('hidden');
     event.currentTarget.classList.add('active');
+
+    if(tabId !== 'manageClientsTab') {
+        backToAdminClientList();
+    }
 }
 
 async function handleStaffSubmit(event, targetRole) {
@@ -438,5 +464,266 @@ async function trackColis() {
         }
     } catch (e) {
         alert("Erreur lors de la récupération des informations de suivi.");
+    }
+}
+
+// ==========================================
+// MOTEUR DE MESSAGERIE TEMPS RÉEL (WHATSAPP DE BOUT EN BOUT)
+// ==========================================
+let unsubscribeChat = null;
+
+function initChatListener(clientPhone, containerId) {
+    if (unsubscribeChat) unsubscribeChat();
+
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const chatDocRef = window.fs.doc(window.db, "chats", clientPhone);
+
+    unsubscribeChat = window.fs.onSnapshot(chatDocRef, (docSnap) => {
+        container.innerHTML = '';
+        if (docSnap.exists() && docSnap.data().messages) {
+            const msgs = docSnap.data().messages;
+            msgs.forEach(m => {
+                const bubble = document.createElement('div');
+                // Déterminer la classe selon l'émetteur
+                let isMe = false;
+                if (currentUser.role === 'client' && m.sender === 'client') isMe = true;
+                if (currentUser.role === 'admin' && m.sender === 'admin') isMe = true;
+
+                bubble.className = `chat-bubble ${isMe ? 'sent' : 'received'}`;
+                
+                if (m.type === 'audio') {
+                    bubble.innerHTML = `<div class="audio-msg">🎵 <span>▶ Audio Message (${m.duration || '0:03'})</span></div>`;
+                } else {
+                    bubble.innerText = m.text;
+                }
+
+                const timeSpan = document.createElement('span');
+                timeSpan.className = 'chat-time';
+                timeSpan.innerText = m.time || 'Maintenant';
+                bubble.appendChild(timeSpan);
+
+                container.appendChild(bubble);
+            });
+            // Auto-scroll vers le bas
+            container.scrollTop = container.scrollHeight;
+        } else {
+            container.innerHTML = '<p style="text-align:center; color:gray; font-size:0.8rem; margin-top:20px;">Aucun message. Commencez la discussion.</p>';
+        }
+    });
+}
+
+async function sendChatMessage(senderRole) {
+    const inputId = senderRole === 'client' ? 'clientChatMessageInput' : 'adminChatMessageInput';
+    const msgInput = document.getElementById(inputId);
+    const text = msgInput.value.trim();
+    if (!text) return;
+
+    const targetPhone = senderRole === 'client' ? currentUser.phone : activeAdminChatPhone;
+    if (!targetPhone) return;
+
+    const chatDocRef = window.fs.doc(window.db, "chats", targetPhone);
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const newMsg = {
+        sender: senderRole,
+        type: 'text',
+        text: text,
+        time: timeStr,
+        timestamp: Date.now()
+    };
+
+    try {
+        const docSnap = await window.fs.getDoc(chatDocRef);
+        let currentMessages = [];
+        if (docSnap.exists() && docSnap.data().messages) {
+            currentMessages = docSnap.data().messages;
+        }
+        currentMessages.push(newMsg);
+
+        await window.fs.setDoc(chatDocRef, { 
+            clientPhone: targetPhone,
+            lastMessage: text,
+            lastTime: timeStr,
+            messages: currentMessages 
+        }, { merge: true });
+
+        msgInput.value = '';
+    } catch (e) {
+        alert("Erreur d'envoi du message centralisé.");
+    }
+}
+
+// SIMULATION D'ENREGISTREMENT AUDIO UNIQUE SANS LIBRAIRIE EXTERNE
+async function simulateAudioRecord(senderRole) {
+    if (!confirm("Voulez-vous enregistrer et transmettre un message vocal intuitif ?")) return;
+    
+    const targetPhone = senderRole === 'client' ? currentUser.phone : activeAdminChatPhone;
+    if (!targetPhone) return;
+
+    const chatDocRef = window.fs.doc(window.db, "chats", targetPhone);
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const newAudioMsg = {
+        sender: senderRole,
+        type: 'audio',
+        text: '🎤 [Message Vocal]',
+        time: timeStr,
+        duration: '0:04',
+        timestamp: Date.now()
+    };
+
+    try {
+        const docSnap = await window.fs.getDoc(chatDocRef);
+        let currentMessages = [];
+        if (docSnap.exists() && docSnap.data().messages) {
+            currentMessages = docSnap.data().messages;
+        }
+        currentMessages.push(newAudioMsg);
+
+        await window.fs.setDoc(chatDocRef, { 
+            clientPhone: targetPhone,
+            lastMessage: '🎤 Message vocal',
+            lastTime: timeStr,
+            messages: currentMessages 
+        }, { merge: true });
+    } catch (e) { alert("Erreur d'envoi de la structure audio."); }
+}
+
+// RENDU DE LA LISTE WHATSAPP DU CÔTÉ ADMINISTRATEUR
+function renderAdminWhatsAppClients(usersSnapshot) {
+    const listContainer = document.getElementById('adminWhatsAppClientList');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '';
+    
+    // On extrait uniquement les utilisateurs ayant le rôle 'client'
+    let clients = [];
+    usersSnapshot.forEach(doc => {
+        const u = doc.data();
+        if (u.role === 'client') clients.push(u);
+    });
+
+    if (clients.length === 0) {
+        listContainer.innerHTML = '<p style="color:gray; font-size:0.85rem; padding:10px;">Aucun client enregistré sur le système.</p>';
+        return;
+    }
+
+    // Récupérer les derniers messages pour l'aperçu depuis la collection "chats"
+    clients.forEach(async (client) => {
+        const item = document.createElement('div');
+        item.className = 'wa-item';
+        item.onclick = () => openAdminChatWithClient(client.phone, client.name);
+
+        // Initiales de l'avatar
+        const initials = client.name ? client.name.charAt(0).toUpperCase() : 'C';
+
+        item.innerHTML = `
+            <div class="wa-avatar">${initials}</div>
+            <div class="wa-info">
+                <div class="wa-name-row">
+                    <span class="wa-name">${client.name}</span>
+                    <span style="font-size:0.7rem; color:gray;" id="wa-time-${client.phone}">--:--</span>
+                </div>
+                <div class="wa-preview" id="wa-preview-${client.phone}">Cliquez pour ouvrir la discussion sécurisée...</div>
+            </div>
+        `;
+        listContainer.appendChild(item);
+
+        // Liaison asynchrone temps réel avec le résumé de la discussion
+        if (window.db && window.fs) {
+            window.fs.onSnapshot(window.fs.doc(window.db, "chats", client.phone), (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const pfx = document.getElementById(`wa-preview-${client.phone}`);
+                    const tfx = document.getElementById(`wa-time-${client.phone}`);
+                    if(pfx) pfx.innerText = data.lastMessage || 'Aucun message...';
+                    if(tfx) tfx.innerText = data.lastTime || '--:--';
+                }
+            });
+        }
+    });
+}
+
+function openAdminChatWithClient(clientPhone, clientName) {
+    activeAdminChatPhone = clientPhone;
+    document.getElementById('adminChatTargetName').innerText = clientName + ` (${clientPhone})`;
+    
+    document.getElementById('adminClientListZone').classList.add('hidden');
+    document.getElementById('adminChatContainerZone').classList.remove('hidden');
+    
+    // Initialise l'écouteur WhatsApp sur cette conversation spécifique
+    initChatListener(clientPhone, 'adminChatMessages');
+}
+
+function backToAdminClientList() {
+    if (unsubscribeChat) {
+        unsubscribeChat();
+        unsubscribeChat = null;
+    }
+    activeAdminChatPhone = null;
+    document.getElementById('adminChatContainerZone').classList.add('hidden');
+    document.getElementById('adminClientListZone').classList.remove('hidden');
+}
+
+// ==========================================
+// ONGLET ADMIN INDÉPENDANT : GÉRER LES COLIS
+// ==========================================
+function renderAdminGlobalColis(snapshot) {
+    const globalContainer = document.getElementById('adminGlobalColisList');
+    if (!globalContainer) return;
+    globalContainer.innerHTML = '';
+
+    let total = 0;
+
+    snapshot.forEach((doc) => {
+        total++;
+        const c = doc.data();
+        const li = document.createElement('li');
+        li.style.flexDirection = 'column';
+        li.style.alignItems = 'flex-start';
+        li.style.gap = '8px';
+        li.style.padding = '12px 0';
+
+        // Détection si livré pour activer l'autorité de destruction
+        const isLivre = (c.statut === 'Livré au destinataire');
+        
+        li.innerHTML = `
+            <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+                <div><strong>Code : ${c.code}</strong> | ${c.nature}</div>
+                <span class="price-box" style="padding:4px 8px; font-size:0.75rem; background-color:${isLivre ? '#d1fae5':'#ffedd5'}; color:${isLivre ? '#065f46':'#9a3412'};">
+                    ${c.statut}
+                </span>
+            </div>
+            <div style="font-size:0.8rem; color:#64748b; width:100%; display:flex; justify-content:space-between; align-items:center;">
+                <div>Poids : ${c.poids} Kg | Prix : ${c.prix} FC <br> Dest. : ${c.destinataire} (${c.destPhone})</div>
+                <div>
+                    ${isLivre ? 
+                        `<button onclick="deleteColisParAdmin('${c.code}')" class="btn-danger btn-small">Supprimer</button>` : 
+                        `<button class="btn-small" style="background-color:#cbd5e1; color:#94a3b8; cursor:not-allowed;" disabled title="Doit être livré avant suppression">Supprimer</button>`
+                    }
+                </div>
+            </div>
+        `;
+        globalContainer.appendChild(li);
+    });
+
+    if (total === 0) {
+        globalContainer.innerHTML = '<p style="color:gray; font-size:0.85rem; padding:10px;">Aucun colis enregistré dans la base centrale.</p>';
+    }
+}
+
+// SUPPRESSION DU COLIS PAR L'ADMINISTRATEUR SI LIVRÉ
+async function deleteColisParAdmin(codeUnique) {
+    if (confirm(`Voulez-vous supprimer définitivement le colis ${codeUnique} du registre puisqu'il est déjà livré ?`)) {
+        try {
+            await window.fs.deleteDoc(window.fs.doc(window.db, "colis", codeUnique));
+            alert(`Le colis ${codeUnique} a été purgé avec succès.`);
+        } catch (e) {
+            alert("Erreur de suppression sur le cloud centralisé.");
+        }
     }
 }
