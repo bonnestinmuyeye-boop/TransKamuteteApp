@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trans Kamutete - ERP Mobile v2.0</title>
+    <title>Trans Kamutete - ERP Mobile v3.0</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -117,12 +117,12 @@
                     </div>
 
                     <div class="tabs-navigation">
-                        <button class="tab-btn active" id="btnClientTrack" onclick="switchClientTab('clientTrackTab')">Consultez le colis</button>
-                        <button class="tab-btn" id="btnClientChat" onclick="switchClientTab('clientChatTab')">Discuter</button>
+                        <button class="tab-btn active" id="btnTabTrack" onclick="switchClientTab('trackTab')">Consultez le colis</button>
+                        <button class="tab-btn" id="btnTabChat" onclick="switchClientTab('chatTab')">Discuter</button>
                     </div>
 
-                    <div id="clientTrackTab" class="client-tab-content">
-                        <div class="search-box admin-card">
+                    <div id="trackTab" class="client-tab-content">
+                        <div class="search-box">
                             <div class="form-group">
                                 <input type="text" id="trackCodeInput" placeholder="Code unique (Ex: TK-101)">
                             </div>
@@ -131,14 +131,21 @@
                         <div id="trackingResult" class="tracking-card hidden"></div>
                     </div>
 
-                    <div id="clientChatTab" class="client-tab-content hidden">
-                        <div class="chat-wrapper">
-                            <div class="chat-messages custom-scroll" id="clientChatMessages">
+                    <div id="chatTab" class="client-tab-content hidden">
+                        <div class="whatsapp-chat-container">
+                            <div class="chat-header">
+                                <div class="chat-avatar">🎧</div>
+                                <div class="chat-user-info">
+                                    <span class="chat-user-name">Support Client (Trans Kamutete)</span>
+                                    <span class="chat-user-status">Sécurisé de bout en bout</span>
+                                </div>
+                            </div>
+                            <div id="clientMessageArea" class="chat-messages custom-scroll">
                                 </div>
                             <div class="chat-input-bar">
-                                <input type="text" id="clientChatMessageInput" placeholder="Écrire un message...">
-                                <button class="chat-audio-btn" onclick="simulateAudioRecord('client')" title="Enregistrer un audio">🎙️</button>
-                                <button class="chat-send-btn" onclick="sendChatMessage('client')">➔</button>
+                                <input type="text" id="clientChatInput" placeholder="Écrire un message...">
+                                <button type="button" class="btn-audio" onclick="simulateAudioRecord('client')">🎙️</button>
+                                <button type="button" class="btn-send" onclick="sendChatMessage('client')">🚀</button>
                             </div>
                         </div>
                     </div>
@@ -181,7 +188,7 @@
                         <p>Console de configuration administrative</p>
                     </div>
 
-                    <div class="tabs-navigation admin-tabs-scroll custom-scroll">
+                    <div class="tabs-navigation admin-nav-tabs">
                         <button class="tab-btn active" onclick="switchAdminTab('guichetierTab')">Guichetiers</button>
                         <button class="tab-btn" onclick="switchAdminTab('convoyeurTab')">Convoyeurs</button>
                         <button class="tab-btn" onclick="switchAdminTab('kiloTab')">Kilogrammes</button>
@@ -260,32 +267,40 @@
                     </div>
 
                     <div id="manageClientsTab" class="admin-tab-content hidden">
-                        <div class="admin-card" id="adminClientListZone">
-                            <h4>Discussions Clients</h4>
-                            <div class="whatsapp-list custom-scroll" id="adminWhatsAppClientList">
-                                </div>
-                        </div>
-                        
-                        <div class="admin-card hidden" id="adminChatContainerZone">
-                            <div class="chat-header-admin">
-                                <button class="btn-small btn-primary" onclick="backToAdminClientList()">⬅ Retour</button>
-                                <span id="adminChatTargetName" style="font-weight: 800; margin-left: 10px;">Discussion</span>
+                        <div class="admin-whatsapp-wrapper">
+                            <div class="admin-chat-sidebar">
+                                <h5>Clients Inscrits</h5>
+                                <div id="adminChatUserList" class="chat-users-list custom-scroll">
+                                    </div>
                             </div>
-                            <div class="chat-wrapper" style="height: 300px;">
-                                <div class="chat-messages custom-scroll" id="adminChatMessages"></div>
-                                <div class="chat-input-bar">
-                                    <input type="text" id="adminChatMessageInput" placeholder="Répondre au client...">
-                                    <button class="chat-audio-btn" onclick="simulateAudioRecord('admin')" title="Enregistrer un audio">🎙️</button>
-                                    <button class="chat-send-btn" onclick="sendChatMessage('admin')">➔</button>
+                            <div class="admin-chat-main-zone hidden" id="adminChatMainZone">
+                                <div class="chat-header">
+                                    <div class="chat-avatar">👤</div>
+                                    <div class="chat-user-info">
+                                        <span class="chat-user-name" id="adminSelectedClientName">Client</span>
+                                        <span class="chat-user-status" id="adminSelectedClientPhone">Néant</span>
+                                    </div>
                                 </div>
+                                <div id="adminMessageArea" class="chat-messages custom-scroll">
+                                    </div>
+                                <div class="chat-input-bar">
+                                    <input type="text" id="adminChatInput" placeholder="Écrire une réponse...">
+                                    <button type="button" class="btn-audio" onclick="simulateAudioRecord('admin')">🎙️</button>
+                                    <button type="button" class="btn-send" onclick="sendChatMessage('admin')">🚀</button>
+                                </div>
+                            </div>
+                            <div class="admin-chat-placeholder" id="adminChatPlaceholder">
+                                <p>💬 Sélectionnez un client dans la liste pour ouvrir sa discussion en temps réel.</p>
                             </div>
                         </div>
                     </div>
 
                     <div id="manageColisTab" class="admin-tab-content hidden">
                         <div class="admin-card">
-                            <h4>Suivi Global Temps Réel des Colis</h4>
-                            <div id="adminGlobalColisList" class="custom-scroll list-container" style="max-height: 400px;"></div>
+                            <h4>Supervision Globale de tous les Colis</h4>
+                            <p style="font-size: 0.8rem; color: #64748b; margin-top: -8px;">Visualisez l'état global et supprimez les colis finalisés/livrés.</p>
+                            <div id="adminGlobalColisContainer" class="custom-scroll list-container" style="max-height: 400px;">
+                                </div>
                         </div>
                     </div>
 
@@ -297,7 +312,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot } 
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot, orderBy } 
         from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -313,7 +328,7 @@
         const db = getFirestore(app);
 
         window.db = db;
-        window.fs = { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot };
+        window.fs = { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot, orderBy };
     </script>
 
     <script src="app.js"></script>
