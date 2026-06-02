@@ -1,371 +1,728 @@
-:root {
-    --primary: #0284c7;
-    --success: #16a34a;
-    --danger: #dc2626;
-    --dark: #0f172a;
-    --light: #f8fafc;
-    --border: #cbd5e1;
-    --wa-green: #25d366;
-    --wa-bg: #efeae2;
-    --wa-incoming: #ffffff;
-    --wa-outgoing: #d9fdd3;
-    --recording: #ea580c;
+// ==========================================
+// KANIEXPRESS LOGISTICS ENGINE & ENCRYPTION PLATFORM
+// ==========================================
+let currentUser = null;
+let isEditingStaff = false;
+let selectedClientChatPhone = null; // Stocke l'ID de l'interlocuteur ouvert chez l'admin (client, guichetier, convoyeur)
+
+// GESTIONNAIRES MÉDIAS (AUDIO HAUTE FIDÉLITÉ)
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+
+// CLÉ MAÎTRE DU CHIFFREMENT DE BOUT EN BOUT (E2EE SIMULATION LOGICIELLE)
+const CRYPTO_KEY = 143; 
+
+function encryptString(text) {
+    // Chiffrement réversible bit-à-bit (XOR) converti en chaîne hexadécimale sécurisée
+    let result = "";
+    for (let i = 0; i < text.length; i++) {
+        result += ("0" + (text.charCodeAt(i) ^ CRYPTO_KEY).toString(16)).slice(-2);
+    }
+    return "enc::" + result;
 }
 
-* { box-sizing: border-box; transition: all 0.2s ease-in-out; }
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: var(--light);
-    display: block;
-    min-height: 100vh;
-    margin: 0;
+function decryptString(cipherText) {
+    if (!cipherText || !cipherText.startsWith("enc::")) return cipherText;
+    try {
+        let hex = cipherText.substring(5);
+        let str = "";
+        for (let i = 0; i < hex.length; i += 2) {
+            str += String.fromCharCode(parseInt(hex.substr(i, 2), 16) ^ CRYPTO_KEY);
+        }
+        return str;
+    } catch (e) { return "[Erreur de Déchiffrement - Clé Altérée]"; }
 }
 
-.phone-container {
-    width: 100%;
-    height: 100vh;
-    background-color: var(--light);
+// COUCHE LOGICIELLE D'INITIALISATION
+document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(async () => {
+        document.getElementById('splashScreen').classList.add('hidden');
+        document.getElementById('mainAppContainer').classList.remove('hidden');
+        
+        await verifyAndInitAdminRoot();
+
+        const session = localStorage.getItem('deviceSessionUser');
+        if (session) {
+            currentUser = JSON.parse(session);
+            redirectUserToDashboard(currentUser.role);
+        } else {
+            switchScreen('loginScreen');
+        }
+        initSystemListeners();
+    }, 2500); 
+});
+
+function initSystemListeners() {
+    updateKiloDisplay();
+    
+    if (window.db && window.fs) {
+        // Écoute temps réel globale de la table des utilisateurs (tous rôles confondus)
+        window.fs.onSnapshot(window.fs.collection(window.db, "users"), (snapshot) => {
+            renderStaffLists(snapshot);
+            renderAdminChatUserList(snapshot);
+        });
+
+        // Écoute temps réel globale des colis
+        window.fs.onSnapshot(window.fs.collection(window.db, "colis"), (snapshot) => {
+            renderConvoyeurColis(snapshot);
+            renderAdminGlobalColisList(snapshot);
+        });
+
+        // Écoute du prix unitaire au kilo
+        window.fs.onSnapshot(window.fs.doc(window.db, "config", "tarifs"), (docSnap) => {
+            if (docSnap.exists()) {
+                const price = docSnap.data().kiloPrice || "2500";
+                localStorage.setItem('kiloPrice', price);
+                applyKiloDOMUpdates(price);
+            }
+        });
+    }
 }
 
-.phone-screen {
-    width: 100%;
-    height: 100%;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    position: relative; 
+async function verifyAndInitAdminRoot() {
+    try {
+        const adminDoc = await window.fs.getDoc(window.fs.doc(window.db, "users", "+243000000000"));
+        if (!adminDoc.exists()) {
+            await window.fs.setDoc(window.fs.doc(window.db, "users", "+243000000000"), {
+                role: 'admin',
+                name: 'Directeur Général',
+                email: 'admin@gmail.com',
+                phone: '+243000000000',
+                password: 'admin1234'
+            });
+        }
+    } catch (e) { console.error("Mode Hors-ligne ou restriction d'écriture."); }
 }
 
-/* INTERFACE CHARGEMENT INITIAL */
-.splash-container {
-    width: 100%;
-    height: 100vh;
-    background: linear-gradient(135deg, var(--dark) 0%, #1e293b 100%);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: white;
-    text-align: center;
-    padding: 20px;
-    position: fixed; 
-    top: 0;
-    left: 0;
-    z-index: 9999;
-}
-.splash-logo {
-    width: 90px;
-    height: 90px;
-    background-color: var(--primary);
-    border-radius: 24px;
-    font-size: 2.5rem;
-    font-weight: 900;
-    line-height: 90px;
-    box-shadow: 0 10px 25px rgba(2, 132, 199, 0.4);
-    margin-bottom: 20px;
-}
-.splash-title { font-size: 1.8rem; margin: 0 0 8px 0; font-weight: 800; }
-.splash-subtitle { color: #94a3b8; font-size: 0.9rem; margin: 0 0 40px 0; }
-.loading-bar { width: 60%; height: 6px; background-color: #334155; border-radius: 3px; overflow: hidden; }
-.loading-progress { width: 100%; height: 100%; background-color: var(--primary); animation: load 2.5s infinite linear; }
-
-@keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-
-.truck-animation-zone {
-    width: 100%;
-    height: 40px;
-    background-color: #334155;
-    border-radius: 12px;
-    position: relative;
-    overflow: hidden;
-    max-width: 280px;
-}
-.road {
-    position: absolute;
-    bottom: 4px;
-    width: 100%;
-    height: 2px;
-    background: repeating-linear-gradient(90deg, #94a3b8, #94a3b8 10px, transparent 10px, transparent 20px);
-}
-.moving-truck {
-    position: absolute;
-    font-size: 1.4rem;
-    bottom: 6px;
-    animation: drive 4s infinite linear;
-}
-@keyframes drive { 0% { left: -40px; } 100% { left: 100%; } }
-
-.app-header {
-    background: var(--primary);
-    color: white;
-    padding: 14px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 50;
-}
-.app-header h2 { margin: 0; font-size: 1.15rem; font-weight: 700; }
-#logoutBtn { background: rgba(255,255,255,0.25); padding: 6px 14px; font-size: 0.8rem; border-radius: 20px; color: white; border: none; font-weight: bold; cursor: pointer; }
-.app-content { padding: 16px; flex: 1; display: flex; flex-direction: column; }
-.screen { display: flex; flex-direction: column; gap: 20px; width: 100%; }
-.screen-header h3 { margin: 0 0 4px 0; font-size: 1.35rem; color: var(--dark); font-weight: 800; }
-.screen-header p { margin: 0; font-size: 0.85rem; color: #64748b; }
-
-.hidden { display: none !important; }
-
-/* SEPARATION DES FORMULAIRES & DESIGN ELEVE */
-.form-group { 
-    display: flex; 
-    flex-direction: column; 
-    gap: 8px; /* Espace équilibré entre le titre et le cas d'écriture */
-    width: 100%; 
-    margin-bottom: 14px; /* Évite la collision des blocs de saisie */
-}
-label { 
-    font-size: 0.8rem; 
-    color: #475569; 
-    font-weight: 700; 
-    text-transform: uppercase; 
-    letter-spacing: 0.5px;
-}
-input, select { 
-    width: 100%; 
-    padding: 12px 14px; 
-    border: 2px solid var(--border); 
-    border-radius: 12px; 
-    font-size: 0.95rem; 
-    background-color: #ffffff;
-}
-input:focus, select:focus { outline: none; border-color: var(--primary); background-color: #fff; }
-
-.password-wrapper { position: relative; width: 100%; }
-.password-wrapper input { padding-right: 45px; }
-.toggle-password { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; }
-.error-message { font-size: 0.75rem; color: var(--danger); font-weight: 600; min-height: 14px; margin-top: 2px;}
-input.input-error { border-color: var(--danger) !important; background-color: #fef2f2; }
-
-button { padding: 14px; border: none; border-radius: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; text-align: center; }
-.btn-primary { background-color: var(--primary); color: white; }
-.btn-success { background-color: var(--success); color: white; }
-.btn-danger { background-color: var(--danger); color: white; }
-.switch-text { text-align: center; font-size: 0.9rem; color: #64748b; margin-top: 10px; }
-.switch-text a { color: var(--primary); text-decoration: none; font-weight: 700; }
-
-.tabs-navigation { display: flex; background-color: #e2e8f0; border-radius: 14px; padding: 4px; gap: 4px; margin-bottom: 8px; }
-.tab-btn { flex: 1; padding: 10px 2px; font-size: 0.8rem; border-radius: 10px; background: transparent; color: #475569; font-weight: 700; border: none; cursor: pointer;}
-.tab-btn.active { background-color: white; color: var(--primary); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-.admin-tab-content, .client-tab-content { display: flex; flex-direction: column; gap: 20px; width: 100%; }
-
-.custom-scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
-.custom-scroll::-webkit-scrollbar { width: 5px; }
-.custom-scroll::-webkit-scrollbar-track { background: transparent; }
-.custom-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
-
-.admin-card, .tracking-card { background: white; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
-.admin-card h4 { margin: 0 0 4px 0; font-size: 1.1rem; font-weight: 800; color: var(--dark); }
-.list-container { max-height: 250px; width: 100%; padding: 0; margin: 0; list-style: none;}
-li { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
-.action-group { display: flex; gap: 6px; }
-.btn-small { padding: 6px 12px; font-size: 0.75rem; border-radius: 8px; width: auto; }
-.price-box { background-color: #e0f2fe; color: #0369a1; padding: 14px; border-radius: 12px; text-align: center; font-weight: 700; font-size: 1rem; }
-
-.popup-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(15, 23, 42, 0.75);
-    z-index: 999;
-    padding: 16px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-.popup-box {
-    background: white;
-    border-radius: 20px;
-    padding: 22px;
-    width: 92%;
-    max-width: 340px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-    text-align: center;
-}
-.popup-box h4 { margin: 0 0 8px 0; color: var(--dark); font-size: 1.15rem; font-weight: 800; }
-.popup-box p { font-size: 0.85rem; color: #475569; margin: 0 0 14px 0; line-height: 1.4; }
-.popup-data-card { background-color: #f1f5f9; padding: 14px; border-radius: 12px; margin-bottom: 16px; font-size: 0.8rem; text-align: left; word-break: break-all; }
-.popup-data-card p { margin: 6px 0; color: var(--dark); }
-
-/* ==========================================
-   WHATSAPP CHAT COMPONENTS
-   ========================================== */
-.whatsapp-chat-container {
-    display: flex;
-    flex-direction: column;
-    background-color: var(--wa-bg);
-    border-radius: 16px;
-    height: 62vh;
-    border: 1px solid #cbd5e1;
-    overflow: hidden;
+function switchScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+    document.getElementById(screenId).classList.remove('hidden');
 }
 
-.chat-header {
-    background-color: #075e54;
-    color: white;
-    padding: 12px 14px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.chat-avatar {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background-color: rgba(255,255,255,0.25);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 1.1rem;
-}
-.chat-user-info { display: flex; flex-direction: column; }
-.chat-user-name { font-size: 0.9rem; font-weight: bold; }
-.chat-user-status { font-size: 0.7rem; opacity: 0.85; }
+const GMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+const RDC_PHONE_REGEX = /^\+243\d{9}$/;
 
-.chat-messages {
-    flex: 1;
-    padding: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background-image: radial-gradient(rgba(0,0,0,0.03) 12%, transparent 12%);
-    background-size: 14px 14px;
+function validateField(fieldId, regex, errorMessage) {
+    const input = document.getElementById(fieldId);
+    const errorSpan = document.getElementById(`error-${fieldId}`);
+    if (!input || !errorSpan) return true;
+
+    if (!regex.test(input.value.trim())) {
+        input.classList.add('input-error');
+        errorSpan.innerText = errorMessage;
+        return false;
+    } else {
+        input.classList.remove('input-error');
+        errorSpan.innerText = '';
+        return true;
+    }
 }
 
-.msg-bubble {
-    max-width: 80%;
-    padding: 10px 14px;
-    border-radius: 14px;
-    font-size: 0.88rem;
-    line-height: 1.4;
-    word-break: break-word;
-    position: relative;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
-}
-.msg-bubble.incoming {
-    background-color: var(--wa-incoming);
-    align-self: flex-start;
-    border-top-left-radius: 2px;
-}
-.msg-bubble.outgoing {
-    background-color: var(--wa-outgoing);
-    align-self: flex-end;
-    border-top-right-radius: 2px;
-}
-.msg-time {
-    font-size: 0.65rem;
-    color: #748894;
-    text-align: right;
-    margin-top: 6px;
-    display: block;
+function togglePasswordVisibility(fieldId) {
+    const input = document.getElementById(fieldId);
+    input.type = input.type === "password" ? "text" : "password";
 }
 
-.chat-input-bar {
-    background-color: #f0f2f5;
-    padding: 10px 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-top: 1px solid #e6e6e6;
-}
-.chat-input-bar input {
-    flex: 1;
-    padding: 12px;
-    border-radius: 24px;
-    border: 1px solid #ffffff;
-}
-.btn-audio, .btn-send {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    background: #075e54;
-    color: white;
-    padding: 0;
-    font-size: 1rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border: none;
-    cursor: pointer;
-}
-.btn-audio { background: #5c6a72; }
-.btn-audio.recording-active {
-    background-color: var(--recording);
-    animation: pulseMic 1.2s infinite alternate;
+// SÉCURITÉ ET MOTEUR DE SESSIONS
+async function handleLogin(event) {
+    event.preventDefault();
+    if (!validateField('loginEmail', GMAIL_REGEX, "Format requis : @gmail.com") ||
+        !validateField('loginPhone', RDC_PHONE_REGEX, "Format requis : +243XXXXXXXXX")) return;
+
+    const email = document.getElementById('loginEmail').value.trim();
+    const phone = document.getElementById('loginPhone').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    try {
+        const docRef = window.fs.doc(window.db, "users", phone);
+        const docSnap = await window.fs.getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const user = docSnap.data();
+            if (user.email === email && user.password === password) {
+                currentUser = user;
+                localStorage.setItem('deviceSessionUser', JSON.stringify(user));
+                redirectUserToDashboard(user.role);
+                document.querySelectorAll('form').forEach(f => f.reset()); 
+                return;
+            }
+        }
+        alert("Refus d'accès. Aucune concordance sur la base centrale.");
+    } catch (e) { alert("Erreur réseau ou déconnexion serveur."); }
 }
 
-@keyframes pulseMic {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.5); }
-    100% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(234, 88, 12, 0); }
+async function handleRegister(event) {
+    event.preventDefault();
+    if (!validateField('regEmail', GMAIL_REGEX, "Utiliser un compte @gmail.com") ||
+        !validateField('regPhone', RDC_PHONE_REGEX, "Numéro invalide (Ex: +243...)")) return;
+
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const phone = document.getElementById('regPhone').value.trim();
+    const password = document.getElementById('regPassword').value;
+
+    try {
+        const docRef = window.fs.doc(window.db, "users", phone);
+        const docSnap = await window.fs.getDoc(docRef);
+
+        if (docSnap.exists()) {
+            alert("Ce numéro détient déjà un compte actif.");
+            return;
+        }
+
+        const newClient = { role: 'client', name, email, phone, password };
+        await window.fs.setDoc(docRef, newClient);
+
+        document.getElementById('popEmail').innerText = email;
+        document.getElementById('popPhone').innerText = phone;
+        document.getElementById('popPass').innerText = password;
+        document.getElementById('confirmationPopup').classList.remove('hidden');
+        document.querySelectorAll('form').forEach(f => f.reset());
+    } catch(e) { alert("Base de données injoignable."); }
 }
 
-/* RENDU DE L'AUDIO DANS LES BULLES */
-.audio-player-container {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 180px;
-}
-audio {
-    width: 100%;
-    height: 32px;
-    margin-top: 4px;
+function closeConfirmationPopup() {
+    document.getElementById('confirmationPopup').classList.add('hidden');
+    switchScreen('loginScreen');
 }
 
-/* INTERFACE DOUBLE COULOIR (ADMIN CHAT SPLIT) */
-.admin-whatsapp-wrapper {
-    display: flex;
-    background-color: white;
-    border-radius: 16px;
-    border: 1px solid #cbd5e1;
-    height: 65vh;
-    overflow: hidden;
+function redirectUserToDashboard(role) {
+    document.getElementById('logoutBtn').classList.remove('hidden');
+    if (role === 'admin') {
+        switchScreen('adminDashboard');
+        switchAdminTab('guichetierTab');
+    } else if (role === 'guichetier') {
+        updateKiloDisplay();
+        switchScreen('guichetierDashboard');
+    } else if (role === 'convoyeur') {
+        switchScreen('convoyeurDashboard');
+    } else {
+        document.getElementById('clientNameHeader').innerText = currentUser.name;
+        switchScreen('clientDashboard');
+        switchClientTab('trackTab');
+        initClientChatListener(); 
+    }
 }
-.admin-chat-sidebar {
-    width: 38%;
-    border-right: 1px solid #e2e8f0;
-    display: flex;
-    flex-direction: column;
-    background: #ffffff;
-}
-.admin-chat-sidebar h5 { padding: 12px; margin: 0; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 0.85rem; font-weight: bold; }
-.chat-users-list { flex: 1; }
-.chat-user-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 10px;
-    border-bottom: 1px solid #f1f5f9;
-    cursor: pointer;
-}
-.chat-user-item:hover, .chat-user-item.active { background-color: #f0fdf4; }
-.chat-user-item-avatar { width: 34px; height: 34px; border-radius: 50%; background: #e2e8f0; display: flex; justify-content: center; align-items: center; font-size: 0.9rem; }
-.chat-user-item-details { display: flex; flex-direction: column; overflow: hidden; width: 100%; }
-.chat-user-item-name { font-size: 0.78rem; font-weight: bold; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
-.chat-user-item-role { font-size: 0.65rem; color: #25d366; font-weight: bold; text-transform: uppercase;}
-.chat-user-item-preview { font-size: 0.68rem; color: #64748b; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
 
-.admin-chat-main-zone { width: 62%; display: flex; flex-direction: column; background-color: var(--wa-bg); }
-.admin-chat-placeholder {
-    width: 62%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 25px;
-    text-align: center;
-    color: #64748b;
-    font-size: 0.9rem;
-    background-color: #f8fafc;
+function logout() {
+    if(clientChatUnsubscribe) clientChatUnsubscribe();
+    if(adminChatUnsubscribe) adminChatUnsubscribe();
+    currentUser = null;
+    localStorage.removeItem('deviceSessionUser');
+    document.getElementById('logoutBtn').classList.add('hidden');
+    switchScreen('loginScreen');
+}
+
+function switchAdminTab(tabId) {
+    document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.add('hidden'));
+    document.querySelectorAll('.admin-nav-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+    
+    document.getElementById(tabId).classList.remove('hidden');
+    if(event) event.currentTarget.classList.add('active');
+}
+
+function switchClientTab(tabId) {
+    document.querySelectorAll('.client-tab-content').forEach(c => c.classList.add('hidden'));
+    document.querySelectorAll('#clientDashboard .tabs-navigation .tab-btn').forEach(b => b.classList.remove('active'));
+    
+    document.getElementById(tabId).classList.remove('hidden');
+    if(tabId === 'trackTab') document.getElementById('btnTabTrack').classList.add('active');
+    if(tabId === 'chatTab') {
+        document.getElementById('btnTabChat').classList.add('active');
+        scrollChatToBottom('clientMessageArea');
+    }
+}
+
+// MANAGEMENT STRUCTUREL DE COMPTES AGENTS
+async function handleStaffSubmit(event, targetRole) {
+    event.preventDefault();
+    const pfx = targetRole;
+    
+    const name = document.getElementById(`${pfx}Name`).value.trim();
+    const ville = document.getElementById(`${pfx}Ville`).value.trim();
+    const email = document.getElementById(`${pfx}Email`).value.trim();
+    const phone = document.getElementById(`${pfx}Phone`).value.trim();
+    const password = document.getElementById(`${pfx}Password`).value;
+
+    if (!GMAIL_REGEX.test(email) || !RDC_PHONE_REGEX.test(phone)) {
+        alert("Les contraintes de saisies globales n'ont pas été respectées.");
+        return;
+    }
+
+    try {
+        if (isEditingStaff) {
+            const oldPhone = document.getElementById(`edit${pfx.charAt(0).toUpperCase() + pfx.slice(1)}OldPhone`).value;
+            if (oldPhone !== phone) {
+                await window.fs.deleteDoc(window.fs.doc(window.db, "users", oldPhone));
+            }
+        }
+
+        await window.fs.setDoc(window.fs.doc(window.db, "users", phone), {
+            role: targetRole, name, ville, email, phone, password
+        });
+
+        alert("Modifications répercutées sur la base centrale.");
+        cancelStaffEdit(targetRole);
+        event.target.reset();
+    } catch(e) { alert("Échec d'écriture cloud."); }
+}
+
+async function prepareEditStaff(phone, role) {
+    isEditingStaff = true;
+    const pfx = role;
+    const cap = role.charAt(0).toUpperCase() + role.slice(1);
+
+    try {
+        const docSnap = await window.fs.getDoc(window.fs.doc(window.db, "users", phone));
+        if (!docSnap.exists()) return;
+        const agent = docSnap.data();
+
+        document.getElementById(`${pfx}FormTitle`).innerText = `Modifier le ${cap}`;
+        document.getElementById(`btn${cap}Form`).innerText = "Sauvegarder les modifications";
+        document.getElementById(`btnCancel${cap}Edit`).classList.remove('hidden');
+        document.getElementById(`edit${cap}OldPhone`).value = agent.phone;
+
+        document.getElementById(`${pfx}Name`).value = agent.name;
+        document.getElementById(`${pfx}Ville`).value = agent.ville;
+        document.getElementById(`${pfx}Email`).value = agent.email;
+        document.getElementById(`${pfx}Phone`).value = agent.phone;
+        document.getElementById(`${pfx}Password`).value = agent.password;
+    } catch (e) { alert("Impossible d'extraire les métadonnées."); }
+}
+
+function cancelStaffEdit(role) {
+    isEditingStaff = false;
+    const pfx = role;
+    const cap = role.charAt(0).toUpperCase() + role.slice(1);
+    document.getElementById(`${pfx}FormTitle`).innerText = `Ajouter un ${cap}`;
+    document.getElementById(`btn${cap}Form`).innerText = `Enregistrer le ${cap}`;
+    document.getElementById(`btnCancel${cap}Edit`).classList.add('hidden');
+    document.querySelector(`#${pfx}Tab form`).reset();
+}
+
+async function deleteStaff(phone) {
+    if (confirm("Révoquer définitivement et détruire les accès cloud de cet agent ?")) {
+        try {
+            await window.fs.deleteDoc(window.fs.doc(window.db, "users", phone));
+            alert("Compte détruit de l'écosystème.");
+        } catch(e) { alert("Serveur distant inaccessible."); }
+    }
+}
+
+function renderStaffLists(snapshot) {
+    const gList = document.getElementById('guichetierList');
+    const cList = document.getElementById('convoyeurList');
+    
+    if (gList) gList.innerHTML = '';
+    if (cList) cList.innerHTML = '';
+
+    snapshot.forEach((doc) => {
+        const u = doc.data();
+        if (u.role === 'admin') return;
+        
+        const li = document.createElement('li');
+        li.innerHTML = `<div><strong>${u.name}</strong><br><small>${u.ville || 'Dépôt Indéfini'} | ${u.phone}</small></div>
+            <div class="action-group">
+                <button onclick="prepareEditStaff('${u.phone}', '${u.role}')" class="btn-primary btn-small">Modifier</button>
+                <button onclick="deleteStaff('${u.phone}')" class="btn-danger btn-small">Suppr</button>
+            </div>`;
+        
+        if (u.role === 'guichetier' && gList) gList.appendChild(li);
+        if (u.role === 'convoyeur' && cList) cList.appendChild(li);
+    });
+}
+
+// TARIFS ET PRICING ENGINE
+async function handleKiloSubmit(event) {
+    event.preventDefault();
+    const newPrice = document.getElementById('inputPriceKilo').value;
+    if(newPrice <= 0) return;
+
+    try {
+        await window.fs.setDoc(window.fs.doc(window.db, "config", "tarifs"), { kiloPrice: newPrice });
+        alert("Tarification unitaire globale mise à jour.");
+        event.target.reset();
+    } catch(e) { alert("Échec réseau."); }
+}
+
+async function deleteKiloPrice() {
+    try {
+        await window.fs.setDoc(window.fs.doc(window.db, "config", "tarifs"), { kiloPrice: "0" });
+        alert("Tarif forcé à 0 FC.");
+    } catch(e) { alert("Action refusée."); }
+}
+
+function updateKiloDisplay() {
+    const currentPrice = localStorage.getItem('kiloPrice') || '2500';
+    applyKiloDOMUpdates(currentPrice);
+}
+
+function applyKiloDOMUpdates(price) {
+    if(document.getElementById('displayAdminKiloPrice')) document.getElementById('displayAdminKiloPrice').innerText = price;
+    if(document.getElementById('currentKiloRateLabel')) document.getElementById('currentKiloRateLabel').innerText = price;
+
+    const btnDelete = document.getElementById('btnDeleteKilo');
+    if(btnDelete) {
+        if(price !== '0') btnDelete.classList.remove('hidden');
+        else btnDelete.classList.add('hidden');
+    }
+}
+
+// LOGISTIQUE D'ÉMISSION ET TRAÇABILITÉ DES COLIS
+function calculerPrix() {
+    const poids = document.getElementById('colisPoids').value;
+    const rate = localStorage.getItem('kiloPrice') || 2500;
+    document.getElementById('prixCalcule').innerText = poids ? Math.round(poids * rate) : 0;
+}
+
+async function createColis(event) {
+    event.preventDefault();
+    const nature = document.getElementById('colisNature').value;
+    const poids = document.getElementById('colisPoids').value;
+    const destinataire = document.getElementById('colisDestinataire').value;
+    const destPhone = document.getElementById('colisDestPhone').value;
+
+    if (!RDC_PHONE_REGEX.test(destPhone)) {
+        alert("Le numéro du récepteur doit respecter le format réglementaire (+243...)");
+        return;
+    }
+
+    const newId = `TK-${Math.floor(100 + Math.random() * 900)}`;
+
+    try {
+        await window.fs.setDoc(window.fs.doc(window.db, "colis", newId), {
+            code: newId, nature, poids, destinataire, destPhone, 
+            prix: document.getElementById('prixCalcule').innerText, 
+            statut: 'Enregistré au dépôt initial',
+            timestamp: Date.now()
+        });
+
+        alert(`Bordereau cloud émis avec succès ! Code de suivi : ${newId}`);
+        event.target.reset(); 
+        document.getElementById('prixCalcule').innerText = '0';
+    } catch(e) { alert("Erreur lors de l'injection logistique."); }
+}
+
+function renderConvoyeurColis(snapshot) {
+    const container = document.getElementById('convoyeurColisList');
+    if (!container) return;
+    container.innerHTML = '';
+    let hasColis = false;
+
+    snapshot.forEach((doc) => {
+        hasColis = true;
+        const c = doc.data();
+        const card = document.createElement('div');
+        card.className = 'admin-card';
+        card.innerHTML = `
+            <strong>Code : ${c.code}</strong> (${c.nature})<br>
+            État central : <span style="color:var(--primary); font-weight:700;">${c.statut}</span>
+            <select onchange="updateStatutCloud('${c.code}', this.value)">
+                <option value="">-- Assigner une nouvelle étape --</option>
+                <option value="En transit (Sur route)">En transit (Sur route)</option>
+                <option value="Arrivé au dépôt de destination">Arrivé au dépôt</option>
+                <option value="Livré au destinataire">Livré au destinataire</option>
+            </select>`;
+        container.appendChild(card);
+    });
+
+    if (!hasColis) container.innerHTML = '<p style="color:gray; font-size:0.85rem;">Aucun chargement en transit détecté.</p>';
+}
+
+async function updateStatutCloud(code, newStatut) {
+    if (!newStatut) return;
+    try {
+        await window.fs.updateDoc(window.fs.doc(window.db, "colis", code), { statut: newStatut });
+        alert(`Statut du colis ${code} synchronisé.`);
+    } catch(e) { alert("Erreur d'écriture."); }
+}
+
+async function trackColis() {
+    const code = document.getElementById('trackCodeInput').value.trim().toUpperCase();
+    const resultDiv = document.getElementById('trackingResult');
+    if (!code) return alert("Saisissez un code.");
+
+    try {
+        const docRef = window.fs.doc(window.db, "colis", code);
+        const docSnap = await window.fs.getDoc(docRef);
+        resultDiv.classList.remove('hidden');
+
+        if (docSnap.exists()) {
+            const colis = docSnap.data();
+            resultDiv.innerHTML = `
+                <h5>Bordereau central : ${colis.code}</h5>
+                <p><strong>Contenu :</strong> ${colis.nature}</p>
+                <p><strong>Poids :</strong> ${colis.poids} Kg</p>
+                <p><strong>Frais payés :</strong> ${colis.prix} FC</p>
+                <div class="price-box" style="background-color:rgba(2,132,199,0.1); font-size:0.9rem;">
+                    <strong>Localisation :</strong> ${colis.statut}
+                </div>`;
+        } else {
+            resultDiv.innerHTML = `<p style="color:red; font-weight:bold;">Aucun bordereau correspondant à "${code}".</p>`;
+        }
+    } catch (e) { alert("Erreur d'acquisition."); }
+}
+
+// ==========================================
+// MOTEUR DE DISCUSSION WHATSAPP EN TEMPS RÉEL (CLIENT <-> ADMIN)
+// ==========================================
+let clientChatUnsubscribe = null;
+function initClientChatListener() {
+    if (clientChatUnsubscribe) clientChatUnsubscribe();
+    if (!currentUser || !window.db) return;
+
+    const chatRef = window.fs.collection(window.db, "chats", currentUser.phone, "messages");
+    const q = window.fs.query(chatRef, window.fs.orderBy("timestamp", "asc"));
+
+    clientChatUnsubscribe = window.fs.onSnapshot(q, (snapshot) => {
+        const area = document.getElementById('clientMessageArea');
+        if (!area) return;
+        area.innerHTML = '';
+
+        snapshot.forEach((doc) => {
+            const m = doc.data();
+            const bubble = document.createElement('div');
+            bubble.className = `msg-bubble ${m.sender === currentUser.phone ? 'outgoing' : 'incoming'}`;
+            
+            const timeStr = new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            // Traitement conditionnel selon le type de message (Audio vs Texte)
+            if (m.type === "audio") {
+                bubble.innerHTML = `
+                    <div class="audio-player-container">
+                        <small>🔊 Note Vocale Chiffrée 🔐</small>
+                        <audio src="${m.text}" controls></audio>
+                        <span class="msg-time">${timeStr}</span>
+                    </div>`;
+            } else {
+                const clearText = decryptString(m.text);
+                bubble.innerHTML = `${clearText} <span class="msg-time">${timeStr}</span>`;
+            }
+            area.appendChild(bubble);
+        });
+        scrollChatToBottom('clientMessageArea');
+    });
+}
+
+// CHARGEMENT DE LA LISTE DE CHAT OMNICANALE POUR L'ADMINISTRATEUR (CLIENTS + GUICHETIERS + CONVOYEURS)
+function renderAdminChatUserList(snapshot) {
+    const listContainer = document.getElementById('adminChatUserList');
+    if (!listContainer) return;
+    listContainer.innerHTML = '';
+
+    snapshot.forEach((doc) => {
+        const u = doc.data();
+        if (u.role === 'admin') return; // Ne pas s'afficher soi-même
+
+        const div = document.createElement('div');
+        div.className = `chat-user-item ${selectedClientChatPhone === u.phone ? 'active' : ''}`;
+        div.onclick = () => openAdminChatWithClient(u.phone, u.name, u.role);
+        div.innerHTML = `
+            <div class="chat-user-item-avatar">👤</div>
+            <div class="chat-user-item-details">
+                <span class="chat-user-item-name">${u.name}</span>
+                <span class="chat-user-item-role">${u.role}</span>
+                <span class="chat-user-item-preview">${u.phone}</span>
+            </div>`;
+        listContainer.appendChild(div);
+    });
+}
+
+let adminChatUnsubscribe = null;
+function openAdminChatWithClient(clientPhone, clientName, clientRole) {
+    selectedClientChatPhone = clientPhone;
+    
+    document.getElementById('adminChatPlaceholder').classList.add('hidden');
+    document.getElementById('adminChatMainZone').classList.remove('hidden');
+
+    document.getElementById('adminSelectedClientName').innerText = `${clientName} (${clientRole.toUpperCase()})`;
+    document.getElementById('adminSelectedClientPhone').innerText = `Canal Privé : ${clientPhone} | E2EE Activé`;
+
+    document.querySelectorAll('.chat-user-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.querySelector('.chat-user-item-preview').innerText === clientPhone) item.classList.add('active');
+    });
+
+    if (adminChatUnsubscribe) adminChatUnsubscribe();
+
+    const chatRef = window.fs.collection(window.db, "chats", clientPhone, "messages");
+    const q = window.fs.query(chatRef, window.fs.orderBy("timestamp", "asc"));
+
+    adminChatUnsubscribe = window.fs.onSnapshot(q, (snapshot) => {
+        const area = document.getElementById('adminMessageArea');
+        if (!area) return;
+        area.innerHTML = '';
+
+        snapshot.forEach((doc) => {
+            const m = doc.data();
+            const bubble = document.createElement('div');
+            bubble.className = `msg-bubble ${m.sender === 'admin' ? 'outgoing' : 'incoming'}`;
+            
+            const timeStr = new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            if (m.type === "audio") {
+                bubble.innerHTML = `
+                    <div class="audio-player-container">
+                        <small>🔊 Note Vocale Chiffrée 🔐</small>
+                        <audio src="${m.text}" controls></audio>
+                        <span class="msg-time">${timeStr}</span>
+                    </div>`;
+            } else {
+                const clearText = decryptString(m.text);
+                bubble.innerHTML = `${clearText} <span class="msg-time">${timeStr}</span>`;
+            }
+            area.appendChild(bubble);
+        });
+        scrollChatToBottom('adminMessageArea');
+    });
+}
+
+// ENVOI DE MESSAGES TEXTES SECURISE (CHIFFRES DANS LA BASE CLOUD)
+async function sendChatMessage(role) {
+    const inputId = role === 'admin' ? 'adminChatInput' : 'clientChatInput';
+    const inputEl = document.getElementById(inputId);
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    let targetClientPhone = role === 'admin' ? selectedClientChatPhone : currentUser.phone;
+    if (!targetClientPhone) return;
+
+    // Chiffrement strict avant envoi au serveur
+    const encryptedText = encryptString(text);
+
+    try {
+        const messageCollection = window.fs.collection(window.db, "chats", targetClientPhone, "messages");
+        await window.fs.addDoc(messageCollection, {
+            sender: role === 'admin' ? 'admin' : currentUser.phone,
+            text: encryptedText,
+            type: 'text',
+            timestamp: Date.now()
+        });
+        inputEl.value = '';
+    } catch(e) { alert("Le paquet sécurisé n'a pas pu être acheminé."); }
+}
+
+// CORE SYSTEM AUDIO : ENREGISTREMENT ET ENVOI AUDIO EN BASE64
+async function toggleAudioRecord(role) {
+    const btnId = role === 'admin' ? 'adminAudioBtn' : 'clientAudioBtn';
+    const btnEl = document.getElementById(btnId);
+    let targetClientPhone = role === 'admin' ? selectedClientChatPhone : currentUser.phone;
+    
+    if (!targetClientPhone) return alert("Sélectionnez d'abord un canal de chat.");
+
+    if (!isRecording) {
+        // Lancement de l'acquisition du flux micro
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            return alert("L'acquisition Audio n'est pas prise en charge sur ce terminal.");
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioChunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+            
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                
+                // Transformation du binaire pur Blob en chaîne Base64 transmissible par document JSON
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = async () => {
+                    const base64Audio = reader.result;
+                    
+                    try {
+                        const messageCollection = window.fs.collection(window.db, "chats", targetClientPhone, "messages");
+                        await window.fs.addDoc(messageCollection, {
+                            sender: role === 'admin' ? 'admin' : currentUser.phone,
+                            text: base64Audio, // Contient la donnée encodée prête pour la balise HTML5
+                            type: 'audio',
+                            timestamp: Date.now()
+                        });
+                    } catch (err) { alert("Erreur d'injection du fichier audio."); }
+                };
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            btnEl.classList.add('recording-active');
+            btnEl.innerText = "🛑";
+        } catch (err) { alert("Accès micro refusé par le système d'exploitation."); }
+    } else {
+        // Arrêt de l'enregistrement
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+            mediaRecorder.stop();
+            // Coupe le microphone proprement
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+        isRecording = false;
+        btnEl.classList.remove('recording-active');
+        btnEl.innerText = "🎙️";
+    }
+}
+
+function scrollChatToBottom(areaId) {
+    const el = document.getElementById(areaId);
+    if(el) el.scrollTop = el.scrollHeight;
+}
+
+// MANAGEMENT LOGISTIQUE GLOBAL (ADMIN)
+function renderAdminGlobalColisList(snapshot) {
+    const container = document.getElementById('adminGlobalColisContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    const ul = document.createElement('ul');
+    ul.className = "custom-scroll list-container";
+    ul.style.maxHeight = "100%";
+    let counter = 0;
+
+    snapshot.forEach((doc) => {
+        counter++;
+        const c = doc.data();
+        const li = document.createElement('li');
+        li.style.flexDirection = "column";
+        li.style.alignItems = "flex-start";
+        li.style.gap = "6px";
+        li.style.padding = "12px 0";
+        
+        const isLivre = c.statut && c.statut.toLowerCase().includes('livré');
+        const deleteButtonHtml = isLivre 
+            ? `<button onclick="deleteColisPermanently('${c.code}')" class="btn-danger btn-small">Détruire l'archive</button>` 
+            : `<small style="color:gray; font-style:italic;">Acheminement en cours</small>`;
+
+        li.innerHTML = `
+            <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+                <strong>📦 Code : ${c.code}</strong>
+                <span class="price-box" style="padding:4px 8px; font-size:0.75rem;">${c.prix} FC</span>
+            </div>
+            <div style="font-size:0.8rem; color:#475569; width:100%;">
+                Contenu: ${c.nature} | Poids: ${c.poids} Kg <br>
+                Récepteur: ${c.destinataire} (${c.destPhone}) <br>
+                Statut actuel : <strong style="color:var(--primary);">${c.statut}</strong>
+            </div>
+            <div style="width:100%; text-align:right; margin-top:4px;">
+                ${deleteButtonHtml}
+            </div>`;
+        ul.appendChild(li);
+    });
+
+    if(counter === 0) {
+        container.innerHTML = `<p style="color:gray; font-size:0.85rem; padding:10px; text-align:center;">Registre vide.</p>`;
+    } else {
+        container.appendChild(ul);
+    }
+}
+
+async function deleteColisPermanently(code) {
+    if (confirm(`⚠️ Confirmer la suppression définitive du colis ${code} du Cloud central ?`)) {
+        try {
+            await window.fs.deleteDoc(window.fs.doc(window.db, "colis", code));
+            alert("Bordereau archivé avec succès.");
+        } catch(e) { alert("Accès réseau refusé."); }
+    }
 }
