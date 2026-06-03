@@ -3,76 +3,416 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trans Kamutete - Direction Générale</title>
+    <title>Trans Kamutete - ERP Mobile v3.5</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- Conteneur principal fluide qui s'adapte à tous les écrans -->
-    <div class="app-container">
-        
-        <!-- En-tête de l'application -->
-        <header class="app-header">
-            <h1>Trans Kamutete</h1>
-            <button class="btn-quitter">Quitter</button>
-        </header>
-
-        <!-- Contenu Administratif -->
-        <main class="app-main">
-            <h2>Direction Générale</h2>
-            <p class="subtitle">Console de configuration administrative</p>
-
-            <!-- Barre de Navigation des Onglets -->
-            <nav class="tabs-nav">
-                <button class="tab-link">Guichetiers</button>
-                <button class="tab-link">Convoyeurs</button>
-                <button class="tab-link">Kilogrammes</button>
-                <button class="tab-link">Messagerie</button>
-                <button class="tab-link active">Colis</button>
-            </nav>
-
-            <!-- Section de Contenu Dynamique -->
-            <section class="tab-content">
-                
-                <!-- Formulaire d'enregistrement d'un colis -->
-                <div class="form-container">
-                    <h3>Enregistrement d'un nouveau colis</h3>
-                    <form id="formColis">
-                        
-                        <!-- NOUVEAU : Champ Nom de l'expéditeur -->
-                        <div class="input-group">
-                            <label for="nomExpediteur">Nom de l'expéditeur</label>
-                            <input type="text" id="nomExpediteur" placeholder="Ex: Bonnestin Muyeye" required>
-                        </div>
-
-                        <div class="input-group">
-                            <label for="natureMarchandise">Nature de la marchandise</label>
-                            <input type="text" id="natureMarchandise" placeholder="Ex: Sac de farine, Composants" required>
-                        </div>
-
-                        <div class="input-group">
-                            <label for="poidsColis">Poids (en Kg)</label>
-                            <input type="number" id="poidsColis" placeholder="Ex: 15" min="1" required>
-                        </div>
-
-                        <div class="input-group">
-                            <label for="nomDestinataire">Nom du destinataire</label>
-                            <input type="text" id="nomDestinataire" placeholder="Ex: Sarah Kazadi" required>
-                        </div>
-
-                        <div class="input-group">
-                            <label for="telephoneDestinataire">Téléphone du destinataire</label>
-                            <input type="tel" id="telephoneDestinataire" placeholder="Ex: +243972177681" required>
-                        </div>
-
-                        <button type="submit" class="btn-submit">Émettre le Bordereau</button>
-                    </form>
-                </div>
-
-            </section>
-        </main>
+    <div id="splashScreen" class="splash-container">
+        <div class="splash-logo">TK</div>
+        <h1 class="splash-title">Trans Kamutete</h1>
+        <p class="splash-subtitle">Logistique & Traçabilité en temps réel</p>
+        <div class="loading-bar"><div class="loading-progress"></div></div>
     </div>
 
-    <script src="script.js"></script>
+    <div class="phone-container hidden" id="mainAppContainer">
+        <div class="phone-screen">
+            
+            <header class="app-header">
+                <h2>Trans Kamutete</h2>
+                <button id="logoutBtn" class="hidden" onclick="logout()">Quitter</button>
+            </header>
+
+            <main class="app-content">
+
+                <section id="loginScreen" class="screen">
+                    <div class="truck-animation-zone">
+                        <div class="road"></div>
+                        <div class="moving-truck">🚚💨</div>
+                    </div>
+                    
+                    <div class="screen-header">
+                        <h3>Connexion</h3>
+                        <p>Saisissez vos accès de sécurité</p>
+                    </div>
+                    <form onsubmit="handleLogin(event)" novalidate>
+                        <div class="form-group">
+                            <label for="loginEmail">Adresse Gmail</label>
+                            <input type="email" id="loginEmail" placeholder="nom@gmail.com" required>
+                            <span class="error-message" id="error-loginEmail"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPhone">Numéro de téléphone RDC</label>
+                            <input type="tel" id="loginPhone" placeholder="+243XXXXXXXXX" maxlength="13" required>
+                            <span class="error-message" id="error-loginPhone"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPassword">Mot de passe</label>
+                            <div class="password-wrapper">
+                                <input type="password" id="loginPassword" placeholder="Minimum 8 caractères" required>
+                                <span class="toggle-password" onclick="togglePasswordVisibility('loginPassword')">👁️</span>
+                            </div>
+                            <span class="error-message" id="error-loginPassword"></span>
+                        </div>
+                        <button type="submit" class="btn-primary">Se connecter sécurisé</button>
+                    </form>
+                    <p class="switch-text">
+                        Vous n'avez pas de compte ? <a href="#" onclick="switchScreen('registerScreen')">Créer un compte</a>
+                    </p>
+                </section>
+
+                <section id="registerScreen" class="screen hidden">
+                    <div class="screen-header">
+                        <h3>Créer un compte</h3>
+                        <p>Espace d'enregistrement client</p>
+                    </div>
+                    <form onsubmit="handleRegister(event)" novalidate>
+                        <div class="form-group">
+                            <label for="regName">Nom Complet</label>
+                            <input type="text" id="regName" placeholder="Ex: Muyeye Mwanabute" required>
+                            <span class="error-message" id="error-regName"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="regEmail">Adresse Gmail</label>
+                            <input type="email" id="regEmail" placeholder="nom@gmail.com" required>
+                            <span class="error-message" id="error-regEmail"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="regPhone">Téléphone RDC (13 car.)</label>
+                            <input type="tel" id="regPhone" placeholder="+243XXXXXXXXX" maxlength="13" required>
+                            <span class="error-message" id="error-regPhone"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="regPassword">Mot de passe</label>
+                            <div class="password-wrapper">
+                                <input type="password" id="regPassword" placeholder="Lettres et chiffres (Min 8)" required>
+                                <span class="toggle-password" onclick="togglePasswordVisibility('regPassword')">👁️</span>
+                            </div>
+                            <span class="error-message" id="error-regPassword"></span>
+                        </div>
+                        <button type="submit" class="btn-primary">Valider l'inscription</button>
+                    </form>
+                    <p class="switch-text">
+                        Déjà inscrit ? <a href="#" onclick="switchScreen('loginScreen')">Se connecter</a>
+                    </p>
+                </section>
+
+                <div id="confirmationPopup" class="popup-overlay hidden">
+                    <div class="popup-box">
+                        <h4>Aperçu de vos identifiants</h4>
+                        <p>Veuillez noter précieusement ces accès pour vous connecter :</p>
+                        <div class="popup-data-card">
+                            <p><strong>Email :</strong> <span id="popEmail"></span></p>
+                            <p><strong>Téléphone :</strong> <span id="popPhone"></span></p>
+                            <p><strong>Mot de passe :</strong> <span id="popPass"></span></p>
+                        </div>
+                        <button onclick="closeConfirmationPopup()" class="btn-success">Je note et je continue</button>
+                    </div>
+                </div>
+
+                <section id="clientDashboard" class="screen hidden">
+                    <div class="screen-header">
+                        <h3>Espace Client</h3>
+                        <p>Bienvenue, <span id="clientNameHeader"></span></p>
+                    </div>
+
+                    <div class="tabs-navigation">
+                        <button class="tab-btn active" id="btnTabTrack" onclick="switchClientTab('trackTab')">Consultez le colis</button>
+                        <button class="tab-btn" id="btnTabChat" onclick="switchClientTab('chatTab')">Discuter</button>
+                    </div>
+
+                    <div id="trackTab" class="client-tab-content">
+                        <div class="search-box">
+                            <div class="form-group">
+                                <label for="trackCodeInput">Code unique du colis</label>
+                                <input type="text" id="trackCodeInput" placeholder="Ex: TK-101">
+                            </div>
+                            <button onclick="trackColis()" class="btn-primary">Vérifier l'état du colis</button>
+                        </div>
+                        <div id="trackingResult" class="tracking-card hidden"></div>
+                    </div>
+
+                    <div id="chatTab" class="client-tab-content hidden">
+                        <div class="whatsapp-chat-container">
+                            <div class="chat-header">
+                                <div class="chat-avatar">🎧</div>
+                                <div class="chat-user-info">
+                                    <span class="chat-user-name">Support Client (Trans Kamutete)</span>
+                                    <span class="chat-user-status">Sécurisé de bout en bout</span>
+                                </div>
+                            </div>
+                            <div id="clientMessageArea" class="chat-messages custom-scroll"></div>
+                            <div class="chat-input-bar">
+                                <input type="text" id="clientChatInput" placeholder="Écrire un message...">
+                                <button type="button" id="mic-client" class="btn-audio" onclick="toggleAudioRecording('client')">🎙️</button>
+                                <button type="button" class="btn-send" onclick="sendChatMessage('client')">🚀</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="guichetierDashboard" class="screen hidden">
+                    <div class="tabs-navigation">
+                        <button class="tab-btn active" id="btnTabGuichetForm" onclick="switchGuichetierTab('guichetFormTab')">Nouveau Colis</button>
+                        <button class="tab-btn" id="btnTabGuichetChat" onclick="switchGuichetierTab('guichetChatTab')">Chat Direction</button>
+                    </div>
+
+                    <div id="guichetFormTab" class="guichetier-tab-content">
+                        <div class="screen-header">
+                            <h3>Guichet & Facturation</h3>
+                            <p>Enregistrement des flux initiaux</p>
+                        </div>
+                        <form onsubmit="createColis(event)">
+                            <div class="form-group">
+                                <label for="colisNature">Nature de la marchandise</label>
+                                <input type="text" id="colisNature" placeholder="Ex: Sacs de farine" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="colisPoids">Poids (en kg)</label>
+                                <input type="number" id="colisPoids" placeholder="Ex: 12" oninput="calculerPrix()" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="colisDestinataire">Nom du Destinataire</label>
+                                <input type="text" id="colisDestinataire" placeholder="Nom complet" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="colisDestPhone">Téléphone Destinataire</label>
+                                <input type="tel" id="colisDestPhone" placeholder="+243XXXXXXXXX" maxlength="13" required>
+                            </div>
+                            <div class="price-box">Tarification : <span id="prixCalcule">0</span> FC (<span id="currentKiloRateLabel"></span> FC/Kg)</div>
+                            <button type="submit" class="btn-primary">Émettre le Bordereau</button>
+                        </form>
+                    </div>
+
+                    <div id="guichetChatTab" class="guichetier-tab-content hidden">
+                        <div class="whatsapp-chat-container">
+                            <div class="chat-header">
+                                <div class="chat-avatar">🏢</div>
+                                <div class="chat-user-info">
+                                    <span class="chat-user-name">Direction Générale</span>
+                                    <span class="chat-user-status">Sécurisé de bout en bout</span>
+                                </div>
+                            </div>
+                            <div id="guichetierMessageArea" class="chat-messages custom-scroll"></div>
+                            <div class="chat-input-bar">
+                                <input type="text" id="guichetierChatInput" placeholder="Message pour la direction...">
+                                <button type="button" id="mic-guichetier" class="btn-audio" onclick="toggleAudioRecording('guichetier')">🎙️</button>
+                                <button type="button" class="btn-send" onclick="sendChatMessage('guichetier')">🚀</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="convoyeurDashboard" class="screen hidden">
+                    <div class="tabs-navigation">
+                        <button class="tab-btn active" id="btnTabConvoyeurList" onclick="switchConvoyeurTab('convoyeurListTab')">Colis à charger</button>
+                        <button class="tab-btn" id="btnTabConvoyeurChat" onclick="switchConvoyeurTab('convoyeurChatTab')">Chat Direction</button>
+                    </div>
+
+                    <div id="convoyeurListTab" class="convoyeur-tab-content">
+                        <div class="screen-header">
+                            <h3>Espace Convoyeur</h3>
+                            <p>Mise à jour des mouvements de route</p>
+                        </div>
+                        <div id="convoyeurColisList" class="custom-scroll list-container"></div>
+                    </div>
+
+                    <div id="convoyeurChatTab" class="convoyeur-tab-content hidden">
+                        <div class="whatsapp-chat-container">
+                            <div class="chat-header">
+                                <div class="chat-avatar">🏢</div>
+                                <div class="chat-user-info">
+                                    <span class="chat-user-name">Direction Générale</span>
+                                    <span class="chat-user-status">Sécurisé de bout en bout</span>
+                                </div>
+                            </div>
+                            <div id="convoyeurMessageArea" class="chat-messages custom-scroll"></div>
+                            <div class="chat-input-bar">
+                                <input type="text" id="convoyeurChatInput" placeholder="Message pour la direction...">
+                                <button type="button" id="mic-convoyeur" class="btn-audio" onclick="toggleAudioRecording('convoyeur')">🎙️</button>
+                                <button type="button" class="btn-send" onclick="sendChatMessage('convoyeur')">🚀</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="adminDashboard" class="screen hidden">
+                    <div class="screen-header">
+                        <h3>Direction Générale</h3>
+                        <p>Console de configuration administrative</p>
+                    </div>
+
+                    <div class="tabs-navigation admin-nav-tabs">
+                        <button class="tab-btn active" onclick="switchAdminTab('guichetierTab')">Guichetiers</button>
+                        <button class="tab-btn" onclick="switchAdminTab('convoyeurTab')">Convoyeurs</button>
+                        <button class="tab-btn" onclick="switchAdminTab('kiloTab')">Kilogrammes</button>
+                        <button class="tab-btn" onclick="switchAdminTab('manageClientsTab')">Messagerie</button>
+                        <button class="tab-btn" onclick="switchAdminTab('manageColisTab')">Colis</button>
+                    </div>
+
+                    <div id="guichetierTab" class="admin-tab-content">
+                        <div class="admin-card">
+                            <h4 id="guichetierFormTitle">Ajouter un Guichetier</h4>
+                            <form onsubmit="handleStaffSubmit(event, 'guichetier')" novalidate>
+                                <input type="hidden" id="editGuichetierOldPhone">
+                                <div class="form-group">
+                                    <label for="guichetierName">Nom Complet</label>
+                                    <input type="text" id="guichetierName" placeholder="Ex: Atlas Kayembe" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="guichetierVille">Ville d'affectation</label>
+                                    <input type="text" id="guichetierVille" placeholder="Ex: Kamina" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="guichetierEmail">Adresse @gmail.com</label>
+                                    <input type="email" id="guichetierEmail" placeholder="nom@gmail.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="guichetierPhone">Téléphone RDC (+243)</label>
+                                    <input type="tel" id="guichetierPhone" placeholder="+243XXXXXXXXX" maxlength="13" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="guichetierPassword">Mot de passe</label>
+                                    <div class="password-wrapper">
+                                        <input type="password" id="guichetierPassword" placeholder="Mot de passe (Min 8)" required>
+                                        <span class="toggle-password" onclick="togglePasswordVisibility('guichetierPassword')">👁️</span>
+                                    </div>
+                                </div>
+                                <button type="submit" id="btnGuichetierForm" class="btn-success">Enregistrer le Guichetier</button>
+                                <button type="button" id="btnCancelGuichetierEdit" class="btn-danger hidden" onclick="cancelStaffEdit('guichetier')" style="margin-top: 8px;">Annuler</button>
+                            </form>
+                        </div>
+                        <div class="admin-card">
+                            <h4>Registre des Guichetiers</h4>
+                            <ul id="guichetierList" class="custom-scroll list-container"></ul>
+                        </div>
+                    </div>
+
+                    <div id="convoyeurTab" class="admin-tab-content hidden">
+                        <div class="admin-card">
+                            <h4 id="convoyeurFormTitle">Ajouter un Convoyeur</h4>
+                            <form onsubmit="handleStaffSubmit(event, 'convoyeur')" novalidate>
+                                <input type="hidden" id="editConvoyeurOldPhone">
+                                <div class="form-group">
+                                    <label for="convoyeurName">Nom Complet</label>
+                                    <input type="text" id="convoyeurName" placeholder="Nom complet" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="convoyeurVille">Ville de base</label>
+                                    <input type="text" id="convoyeurVille" placeholder="Ex: Lubumbashi" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="convoyeurEmail">Adresse @gmail.com</label>
+                                    <input type="email" id="convoyeurEmail" placeholder="nom@gmail.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="convoyeurPhone">Téléphone RDC (+243)</label>
+                                    <input type="tel" id="convoyeurPhone" placeholder="+243XXXXXXXXX" maxlength="13" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="convoyeurPassword">Mot de passe</label>
+                                    <div class="password-wrapper">
+                                        <input type="password" id="convoyeurPassword" placeholder="Mot de passe (Min 8)" required>
+                                        <span class="toggle-password" onclick="togglePasswordVisibility('convoyeurPassword')">👁️</span>
+                                    </div>
+                                </div>
+                                <button type="submit" id="btnConvoyeurForm" class="btn-success">Enregistrer le Convoyeur</button>
+                                <button type="button" id="btnCancelConvoyeurEdit" class="btn-danger hidden" onclick="cancelStaffEdit('convoyeur')" style="margin-top: 8px;">Annuler</button>
+                            </form>
+                        </div>
+                        <div class="admin-card">
+                            <h4>Registre des Convoyeurs</h4>
+                            <ul id="convoyeurList" class="custom-scroll list-container"></ul>
+                        </div>
+                    </div>
+
+                    <div id="kiloTab" class="admin-tab-content hidden">
+                        <div class="admin-card">
+                            <h4>Tarification Spécifique du Kilogramme</h4>
+                            <form onsubmit="handleKiloSubmit(event)">
+                                <div class="form-group">
+                                    <label for="inputPriceKilo">Valeur unitaire (en FC / Kg)</label>
+                                    <input type="number" id="inputPriceKilo" placeholder="Ex: 2500" required>
+                                </div>
+                                <button type="submit" id="btnKiloAction" class="btn-primary">Fixer le prix de base</button>
+                                <button type="button" id="btnDeleteKilo" class="btn-danger hidden" onclick="deleteKiloPrice()" style="margin-top: 8px;">Réinitialiser le tarif (Supprimer)</button>
+                            </form>
+                        </div>
+                        <div class="admin-card">
+                            <h5>État Actuel du Système :</h5>
+                            <div class="price-box" style="font-size: 1.2rem;">
+                                <span id="displayAdminKiloPrice">0</span> FC / Kg
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="manageClientsTab" class="admin-tab-content hidden">
+                        <div class="admin-whatsapp-wrapper">
+                            <div class="admin-chat-sidebar">
+                                <h5>Membres connectés</h5>
+                                <div style="padding: 6px 10px;">
+                                    <input type="text" id="adminSearchUser" placeholder="🔍 Rechercher membre..." oninput="filterAdminUserList()" style="padding: 6px 10px; font-size:0.8rem; border-radius:8px;">
+                                </div>
+                                <div id="adminChatUserList" class="chat-users-list custom-scroll"></div>
+                            </div>
+                            <div class="admin-chat-main-zone hidden" id="adminChatMainZone">
+                                <div class="chat-header">
+                                    <div class="chat-avatar">👤</div>
+                                    <div class="chat-user-info">
+                                        <span class="chat-user-name" id="adminSelectedClientName">Membre</span>
+                                        <span class="chat-user-status" id="adminSelectedClientPhone">Néant</span>
+                                    </div>
+                                </div>
+                                <div id="adminMessageArea" class="chat-messages custom-scroll"></div>
+                                <div class="chat-input-bar">
+                                    <input type="text" id="adminChatInput" placeholder="Écrire une réponse...">
+                                    <button type="button" id="mic-admin" class="btn-audio" onclick="toggleAudioRecording('admin')">🎙️</button>
+                                    <button type="button" class="btn-send" onclick="sendChatMessage('admin')">🚀</button>
+                                </div>
+                            </div>
+                            <div class="admin-chat-placeholder" id="adminChatPlaceholder">
+                                <p>💬 Sélectionnez un client, guichetier ou convoyeur pour démarrer un canal sécurisé de bout en bout.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="manageColisTab" class="admin-tab-content hidden">
+                        <div class="admin-card">
+                            <h4>Supervision Globale de tous les Colis</h4>
+                            <div style="margin-bottom: 10px;">
+                                <label for="adminSearchColis">Rechercher un colis validé</label>
+                                <input type="text" id="adminSearchColis" placeholder="🔍 Filtrer par code, nature, destinataire..." oninput="filterAdminColisList()">
+                            </div>
+                            <div id="adminGlobalColisContainer" class="custom-scroll list-container" style="max-height: 380px;"></div>
+                        </div>
+                    </div>
+
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot, orderBy } 
+        from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB8IuMLM-1961e0SL0gIk1YVtmu2fcCeS4",
+            authDomain: "transkamuteteapp.firebaseapp.com",
+            projectId: "transkamuteteapp",
+            storageBucket: "transkamuteteapp.firebasestorage.app",
+            messagingSenderId: "360060778289",
+            appId: "1:360060778289:web:cceea4d3e740e851f5e210"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.fs = { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, addDoc, getDocs, query, where, onSnapshot, orderBy };
+    </script>
+
+    <script src="app.js"></script>
 </body>
 </html>
